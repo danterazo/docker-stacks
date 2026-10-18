@@ -7,6 +7,11 @@
 
 : 'DANTE ADDITIONS'
 # enable direnv
+if [[ -z ${HOME:-} ]]; then
+	HOME=$(getent passwd "$(id -u)" | cut -d: -f6)
+fi
+export HOME
+
 if command -v direnv >/dev/null 2>&1; then
 	eval "$(direnv hook bash)"
 fi
