@@ -3,7 +3,7 @@
 
 : 'GLOBAL CONFIG'
 HOST_NAME="$(hostname)"
-ROOT_DIR="/docker"
+HOME_DIR="/docker"
 DOCKER_FALLBACK_SUITE="resolute" # latest LTS
 
 : 'UPGRADE UBUNTU'
@@ -113,7 +113,7 @@ for git_user in root dante; do
 done
 
 : 'INIT CONFIG REPOSITORY'
-sudo install -d -o dante -g dante "${ROOT_DIR}"
+sudo install -d -o dante -g dante "${HOME_DIR}"
 
 # pre-seed GitHub host keys system-wide; source: https://api.github.com/meta (verified 2026-10-16)
 KNOWN_HOSTS="/etc/ssh/ssh_known_hosts"
@@ -160,32 +160,32 @@ fi
 
 REPO_URL="git@github.com:danterazo/docker-stacks.git"
 REPO_CREATED=0
-if [ ! -d "${ROOT_DIR}/.git" ]; then
+if [ ! -d "${HOME_DIR}/.git" ]; then
 	# first-time setup; clone repository
-	if ! dante_git clone "${REPO_URL}" "${ROOT_DIR}"; then
+	if ! dante_git clone "${REPO_URL}" "${HOME_DIR}"; then
 		echo "ERROR: Failed to clone repository"
 		exit 1
 	fi
 	REPO_CREATED=1
 else
 	# repo already exists; preserve its sparse-checkout configuration
-	echo "WARNING: Repository already exists at ${ROOT_DIR}; preserving checkout settings..."
-	sudo chown dante:dante "${ROOT_DIR}" || exit 1
-	if [[ -d "${ROOT_DIR}/.git" && ! -L "${ROOT_DIR}/.git" ]]; then
-		sudo chown -R dante:dante "${ROOT_DIR}/.git" || exit 1
-	elif [[ -f "${ROOT_DIR}/.git" ]]; then
-		sudo chown dante:dante "${ROOT_DIR}/.git" || exit 1
+	echo "WARNING: Repository already exists at ${HOME_DIR}; preserving checkout settings..."
+	sudo chown dante:dante "${HOME_DIR}" || exit 1
+	if [[ -d "${HOME_DIR}/.git" && ! -L "${HOME_DIR}/.git" ]]; then
+		sudo chown -R dante:dante "${HOME_DIR}/.git" || exit 1
+	elif [[ -f "${HOME_DIR}/.git" ]]; then
+		sudo chown dante:dante "${HOME_DIR}/.git" || exit 1
 	else
-		echo "ERROR: Git metadata not found at ${ROOT_DIR}/.git"
+		echo "ERROR: Git metadata not found at ${HOME_DIR}/.git"
 		exit 1
 	fi
 fi
 
 # move to root-level repo directory
-cd "${ROOT_DIR}" || exit 1
+cd "${HOME_DIR}" || exit 1
 if [ "${REPO_CREATED}" = "0" ]; then
-	dante_git -C "${ROOT_DIR}" remote set-url origin "${REPO_URL}" &&
-		dante_git -C "${ROOT_DIR}" pull || exit 1
+	dante_git -C "${HOME_DIR}" remote set-url origin "${REPO_URL}" &&
+		dante_git -C "${HOME_DIR}" pull || exit 1
 fi
 
 # host-specific sparse profiles
@@ -194,15 +194,15 @@ sparse_paths=('/.common/' '/bootstrap.sh' '/.gitignore') # common
 for app in "${host_apps[@]}"; do
 	sparse_paths+=("/${app}/")
 done
-dante_git -C "${ROOT_DIR}" sparse-checkout set --no-cone "${sparse_paths[@]}" || true
+dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${sparse_paths[@]}" || true
 
 # move to app dir if the host contains only a single stack
-if [ -d "${ROOT_DIR}/${HOST_NAME}" ]; then
+if [ -d "${HOME_DIR}/${HOST_NAME}" ]; then
 	# should exist in single-stack hosts
-	cd "${ROOT_DIR}/${HOST_NAME}"
+	cd "${HOME_DIR}/${HOST_NAME}"
 else
 	# should exist in both single-stack and multi-stack hosts
-	cd "${ROOT_DIR}"
+	cd "${HOME_DIR}"
 fi
 
 : 'INIT PROFILE'
@@ -216,7 +216,7 @@ sudo rm -f /etc/profile.d/00_lxc-details.sh || true
 sudo rm -f /root/.bash_profile /home/dante/.bash_profile || true
 
 # link common login-shell scripts into /etc/profile.d
-for script in "${ROOT_DIR}"/.common/*.sh; do
+for script in "${HOME_DIR}"/.common/*.sh; do
 	# skip if glob didn't match anything
 	[ -e "$script" ] || continue
 
@@ -227,7 +227,7 @@ for script in "${ROOT_DIR}"/.common/*.sh; do
 done
 
 # link the shared fastfetch config to both root and dante users
-FASTFETCH_CONFIG="${ROOT_DIR}/.common/configs/fastfetch.jsonc"
+FASTFETCH_CONFIG="${HOME_DIR}/.common/configs/fastfetch.jsonc"
 if [ -f "${FASTFETCH_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/fastfetch"
@@ -239,7 +239,7 @@ else
 fi
 
 # link the shared direnv config to both root and dante users
-DIRENV_CONFIG="${ROOT_DIR}/.common/configs/direnv.toml"
+DIRENV_CONFIG="${HOME_DIR}/.common/configs/direnv.toml"
 if [ -f "${DIRENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/direnv" || exit 1
@@ -250,7 +250,7 @@ else
 	exit 1
 fi
 
-AUTOENV_CONFIG="${ROOT_DIR}/.common/configs/autoenv.sh"
+AUTOENV_CONFIG="${HOME_DIR}/.common/configs/autoenv.sh"
 if [ -f "${AUTOENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/autoenv" || exit 1
