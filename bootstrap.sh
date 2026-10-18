@@ -110,6 +110,7 @@ for git_user in root dante; do
 	user_git "${git_user}" config --global user.name "Dante Razo"
 	user_git "${git_user}" config --global user.email "github.d2brf@simplelogin.fr"
 	user_git "${git_user}" config --global pull.rebase false
+	user_git "${git_user}" config --global --replace-all safe.directory /docker
 done
 
 : 'INIT CONFIG REPOSITORY'
