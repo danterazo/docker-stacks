@@ -111,6 +111,7 @@ for git_user in root dante; do
 	user_git "${git_user}" config --global user.email "github.d2brf@simplelogin.fr"
 	user_git "${git_user}" config --global pull.rebase false
 	user_git "${git_user}" config --global --replace-all safe.directory /docker
+	user_git "${git_user}" config --global alias.reset-origin '!git fetch origin && git reset --hard origin/$(git branch --show-current)'
 done
 
 : 'INIT CONFIG REPOSITORY'
