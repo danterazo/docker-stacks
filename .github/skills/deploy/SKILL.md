@@ -102,7 +102,7 @@ on a Proxmox host.
 `dupull` runs `upgrade` followed by `dpull`. `upgrade` performs APT update,
 dist-upgrade, clean, and autoremove with purge. `dpull` pulls Git, pulls/builds
 images, and runs `docker compose up --build -d --remove-orphans` for every
- top-level stack in `/docker`; it does not use `down -v`. A named stack selects
+top-level stack in `/docker`; it does not use `down -v`. A named stack selects
 guests, but does not make `dupull` stack-scoped.
 
 ## Completion
@@ -111,6 +111,9 @@ guests, but does not make `dupull` stack-scoped.
   `dupull` is the completion criterion for that guest; its successful Compose
   start commands are the validation. Do not inspect container health, call
   APIs, open webpages, read logs, or run visual checks.
+- Do not add mount, NFS, image-user, or filesystem write-access probes as
+  deployment gates. Use Git/package/image/Compose command errors, not an
+  inability to inspect Docker's private volume directories, to judge the run.
 - On a nonzero exit or explicit pull/build/up error, stop the rollout. Report
   the guest, command phase, exit status, and that later guests were skipped.
   Do not retry or roll back automatically.
@@ -126,15 +129,15 @@ on success or when stopping for a blocker, using evidence already collected;
 do not add probes, log reads, or a session-history investigation for this step.
 
 - If there is a concrete reusable lesson, make a small targeted update to the
-   relevant deployment skill. Update `.github/copilot-instructions.md` only
-   when the lesson applies across workflows. Preserve concurrent edits and
-   existing approvals, safety gates, and lite-mode limits. This step authorizes
-   these narrow documentation edits, not operational changes or scope expansion.
+  relevant deployment skill. Update `.github/copilot-instructions.md` only
+  when the lesson applies across workflows. Preserve concurrent edits and
+  existing approvals, safety gates, and lite-mode limits. This step authorizes
+  these narrow documentation edits, not operational changes or scope expansion.
 - Record unresolved incidents in the canonical pending ledger with verified
-   evidence, target/path, blocker, and next safe action. Keep temporary runtime
-   observations and unproven hypotheses out of enduring instructions; never
-   record credentials or turn a workaround into a permission exception.
+  evidence, target/path, blocker, and next safe action. Keep temporary runtime
+  observations and unproven hypotheses out of enduring instructions; never
+  record credentials or turn a workaround into a permission exception.
 - Validate changed documentation with `git diff --check` and mention the
-   lesson/update briefly in the final report. Do not commit or push retrospective
-   edits without an explicit request; an earlier deployment push does not cover
-   newly written documentation. If there is no new lesson, make no edits.
+  lesson/update briefly in the final report. Do not commit or push retrospective
+  edits without an explicit request; an earlier deployment push does not cover
+  newly written documentation. If there is no new lesson, make no edits.
