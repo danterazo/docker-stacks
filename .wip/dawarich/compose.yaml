@@ -74,7 +74,6 @@ services:
     container_name: dawarich-geo
     expose:
       - 2322
-    user: ${PUID}:${PGID}
     env_file: .env
     environment:
       INITIAL_DOWNLOAD: "FALSE"

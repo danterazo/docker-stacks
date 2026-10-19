@@ -9,7 +9,6 @@ services:
       - .secrets
     ports:
       - 1411:1411/tcp
-    user: 1000:1000
     volumes:
       - ./data/:/app/data/:rw
     healthcheck:

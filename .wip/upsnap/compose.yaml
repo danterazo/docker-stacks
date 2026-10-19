@@ -10,6 +10,5 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/app/pb_data
-    user: 1000:1000
     security_opt:
       - no-new-privileges=true
