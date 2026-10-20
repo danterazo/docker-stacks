@@ -8,9 +8,9 @@ services:
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
-      - backups_nfs:/backups/:rw
-      - music_nfs:/media/music/:rw
-      - audiobooks_nfs:/media/audiobooks/:rw
+      - /mnt/backups/:/backups/:rw # LXC bind mount of tank/backups/apps/plex-music
+      - /mnt/music/:/media/music/:rw # LXC bind mount of tank/media/music
+      - /mnt/audiobooks/:/media/audiobooks/:rw # LXC bind mount of tank/media/audiobooks
       - /dev/shm/plex-transcode/:/transcode/:rw
     networks:
       - plex-music-net
@@ -38,28 +38,6 @@ services:
 networks:
   plex-music-net:
     name: plex-music-net
-
-volumes:
-  music_nfs:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,rw,noatime,nfsvers=4,hard
-      device: ":/tank/media/music/"
-
-  audiobooks_nfs:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,rw,noatime,nfsvers=4,hard
-      device: ":/tank/media/audiobooks/"
-
-  backups_nfs:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,rw,noatime,nfsvers=4,hard
-      device: ":/tank/backups/apps/plex-music/"
 
 x-dockge:
   urls:
