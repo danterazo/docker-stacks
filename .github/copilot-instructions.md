@@ -51,7 +51,10 @@
   access; recheck volatile ownership and state before guest operations.
   If refresh is incomplete or validation fails, stop deployment rather than
   using the stale map. A deployment request authorizes this local metadata
-  refresh, not committing it or expanding the requested deployment scope.
+  refresh and a separate commit containing only `deployments.yaml` when the
+  refresh changes it. Make that commit before publishing deployment commits or
+  operating on guests; do not combine it with application-code changes. This
+  does not expand the requested deployment scope.
 - Read the root-level deployments.yaml before planning deployment or remote
   validation. Match stack directory names to guest hostnames, including
   parent directories for nested stacks, and apply the exceptions below.

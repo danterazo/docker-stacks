@@ -30,8 +30,12 @@ whether the guest still belongs there.
 - Complete Discovery, Merge Rules and Metadata Format, and Update and Validate
   below. Save and validate `deployments.yaml`, including its America/Chicago
   timestamp, even when guest placements have not changed. Preserve unrelated
-  edits and comments. Never commit or push the refresh without approval; its
-  local uncommitted diff does not block deployment of published code.
+  edits and comments. When this refresh is part of a deployment, summarize the
+  map changes and commit only `deployments.yaml` in its own commit before
+  publishing deployment commits or operating on guests. Use a concise message
+  describing the changes, or `Persist cluster state as of YYYY-MM-DD @ h:mm AM/PM`
+  using the map's America/Chicago date and time. Do not include application code
+  or unrelated changes in this commit.
 - If required discovery is incomplete, ownership is ambiguous, access fails,
   or validation fails, stop before publishing or guest deployment operations.
   Report the blocker; do not fall back to the old map or publish a partial
@@ -301,6 +305,11 @@ existing snapshot unchanged rather than publishing a partial refresh.
    install a missing validator without approval.
 4. Summarize additions, removals, migrations, address changes, tag changes,
    unresolved mappings, and incomplete reads. State that no remote changes were made.
+5. For a deployment-triggered refresh, commit the validated `deployments.yaml`
+  change by itself, after checking that no unrelated edits are included. Report
+  the commit message and summary before proceeding to deployment publishing or
+  guest operations. If the validated file has no diff, no metadata commit is
+  needed.
 
 Refresh after guest creation, deletion, migration, rename, or address changes,
 and before remote validation. Prefer on-demand checks; a weekly read-only
