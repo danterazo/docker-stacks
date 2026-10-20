@@ -1,0 +1,35 @@
+shares:
+  cache:
+    storage_mode: memory
+    workers: 4
+    retention: ~
+transfers:
+  upload:
+    slots: 20
+    speed_limit: 1000
+    limits:
+      queued:
+        files: 500
+        megabytes: 5000
+      daily:
+        files: 1000
+        megabytes: 10000
+        failures: 200
+      weekly:
+        files: 5000
+        megabytes: 50000
+        failures: 1000
+  download:
+    slots: 16
+    speed_limit: 2147483647
+retention:
+  search: 10080
+  logs: 14
+soulseek:
+  listen_ip_address: 0.0.0.0
+  listen_port: 50300
+  distributed_network:
+    disabled: true
+    disable_children: false
+    child_limit: 25
+    logging: false

@@ -5,6 +5,7 @@ services:
     env_file: .env
     volumes:
       - ./db/:/app/data/:rw
+      - ./logs/:/app/logs/:rw
       - ./slskd.yml:/app/slskd.yml:rw
       - soulseek_nfs:/app/:rw
     restart: unless-stopped
