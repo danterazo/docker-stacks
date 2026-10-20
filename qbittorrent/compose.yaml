@@ -13,7 +13,7 @@ services:
       - ./config/:/config/qBittorrent/:rw
       - ./ui/:/ui/:rw
       - ./modcache/:/modcache/:rw
-      - qbittorrent_nfs:/downloads/:rw
+      - /mnt/downloads/:/downloads/:rw # LXC bind mount of tank/downloads/qbittorrent
     network_mode: service:gluetun # use VPN
     depends_on:
       gluetun:
@@ -65,15 +65,6 @@ networks:
   gluetun-net:
     name: gluetun-net
     enable_ipv6: true
-
-volumes:
-  qbittorrent_nfs:
-    name: qbittorrent_nfs
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4,timeo=600,retrans=2
-      device: ":/tank/downloads/qbittorrent/"
 
 x-dockge:
   urls:

@@ -9,7 +9,7 @@ services:
       - ./db/:/app/data/:rw
       - ./logs/:/app/logs/:rw
       - ./slskd.yml:/app/slskd.yml:rw
-      - soulseek_nfs:/app/:rw
+      - /mnt/downloads/:/app/:rw # LXC bind mount of tank/downloads/soulseek
     restart: unless-stopped
     network_mode: service:gluetun # use VPN
     depends_on:
@@ -55,15 +55,6 @@ networks:
   gluetun-net:
     name: gluetun-net
     enable_ipv6: true
-
-volumes:
-  soulseek_nfs:
-    name: soulseek_nfs
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
-      device: ":/tank/downloads/soulseek/"
 
 x-dockge:
   urls:
