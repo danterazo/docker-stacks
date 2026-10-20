@@ -70,7 +70,7 @@ networks:
 
 volumes:
   qbittorrent_nfs:
-    name: gluetun_qbittorrent_nfs
+    name: qbittorrent_nfs
     driver: local
     driver_opts:
       type: nfs
