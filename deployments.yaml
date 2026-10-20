@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-20"
-  timestamp: "4:23:01 AM"
+  timestamp: "4:37:23 AM"
 
 cluster:
   entrypoint:
@@ -56,9 +56,16 @@ docker_guests:
     type: lxc
     tags: [docker, gpu]
   116:
-    hostname: gluetun
+    hostname: qbittorrent
     node: kex
     address: 192.168.30.116
+    pool: prod
+    type: lxc
+    tags: [docker, vpn]
+  117:
+    hostname: soulseek
+    node: kex
+    address: 192.168.30.117
     pool: prod
     type: lxc
     tags: [docker, vpn]
