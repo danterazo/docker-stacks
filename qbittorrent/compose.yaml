@@ -50,7 +50,7 @@ services:
     volumes:
       - ./vpn/:/gluetun/:rw
     networks:
-      - qbittorrent-net
+      - gluetun-net
     security_opt:
       - no-new-privileges:true
     restart: always
@@ -62,8 +62,8 @@ services:
       start_period: 2m
 
 networks:
-  qbittorrent-net:
-    name: qbittorrent-net
+  gluetun-net:
+    name: gluetun-net
     enable_ipv6: true
 
 volumes:

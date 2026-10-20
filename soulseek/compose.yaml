@@ -40,7 +40,7 @@ services:
     volumes:
       - ./vpn/:/gluetun/:rw
     networks:
-      - soulseek-net
+      - gluetun-net
     security_opt:
       - no-new-privileges:true
     restart: always
@@ -52,8 +52,8 @@ services:
       start_period: 2m
 
 networks:
-  soulseek-net:
-    name: soulseek-net
+  gluetun-net:
+    name: gluetun-net
     enable_ipv6: true
 
 volumes:
