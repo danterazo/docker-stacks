@@ -1,7 +1,6 @@
 services:
   adguardhome:
     image: adguard/adguardhome:latest
-    user: 1000:1000
     container_name: adguardhome
     restart: always
     cpus: 1
