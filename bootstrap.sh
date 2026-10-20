@@ -151,14 +151,17 @@ if [ -n "${SSH_DIR}" ]; then
 	export GIT_SSH_COMMAND="ssh -i ${SSH_DIR}/id_ed25519 -o IdentitiesOnly=yes"
 fi
 
-# install or update autoenv without modifying shell startup files
+# install or update autoenv for both accounts without modifying shell startup files
 AUTOENV_URL="git@github.com:hyperupcall/autoenv.git"
-if [[ -d "$HOME/.autoenv" ]]; then
-	git -C "$HOME/.autoenv" remote set-url origin "${AUTOENV_URL}" || exit 1
-	git -C "$HOME/.autoenv" pull --ff-only || exit 1
-else
-	git clone "${AUTOENV_URL}" "$HOME/.autoenv" || exit 1
-fi
+for autoenv_user in root dante; do
+	autoenv_dir="$(getent passwd "${autoenv_user}" | cut -d: -f6)/.autoenv"
+	if [[ -d "${autoenv_dir}" ]]; then
+		user_git "${autoenv_user}" -C "${autoenv_dir}" remote set-url origin "${AUTOENV_URL}" || exit 1
+		user_git "${autoenv_user}" -C "${autoenv_dir}" pull --ff-only || exit 1
+	else
+		user_git "${autoenv_user}" clone "${AUTOENV_URL}" "${autoenv_dir}" || exit 1
+	fi
+done
 
 REPO_URL="git@github.com:danterazo/docker-stacks.git"
 REPO_CREATED=0
