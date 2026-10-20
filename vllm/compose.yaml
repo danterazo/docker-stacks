@@ -1,0 +1,54 @@
+services:
+  vllm:
+    image: blivioniag/vllm-rdna:v0.31.0-extras
+    container_name: radeon-vllm
+    profiles: [evaluation]
+    user: 1000:1000
+    group_add:
+      - ${VIDEO_GID:-44}
+      - ${RENDER_GID:-991}
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    shm_size: 4gb
+    ports:
+      - ${INFERENCE_BIND_ADDRESS:-127.0.0.1}:${VLLM_PORT:-8000}:8000/tcp
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    volumes:
+      - ./data/:/state/:rw
+      - /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}/:/model/:ro
+    command:
+      - serve
+      - /model
+      - --served-model-name
+      - radeon-vllm
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --dtype
+      - float16
+      - --tensor-parallel-size
+      - ${VLLM_TENSOR_PARALLEL_SIZE:-4}
+      - --max-model-len
+      - ${CONTEXT_SIZE:-8192}
+      - --max-num-seqs
+      - "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15m
+    networks:
+      - vllm-net
+
+networks:
+  vllm-net:
+    name: vllm-net

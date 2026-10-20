@@ -262,6 +262,9 @@ existing snapshot unchanged rather than publishing a partial refresh.
 - User-confirmed placements: VM 101 runs `immich`, `plex-video`, and
   `tautulli`; LXC 108 runs development `plex-video` and `tautulli`; LXC 120
   runs `plex-music` and `tautulli`. Preserve these exceptions.
+- VM 105 (`radeon-vm`) runs the separate `ollama` and `vllm` stacks, with
+  Ollama primary and vLLM opt-in through its `evaluation` profile. Preserve
+  this placement exception even though neither directory matches the hostname.
 - LXCs 102 and 108 are development deployments, separate from VM 101. They
   were stopped during initial discovery; query current state when needed
   without storing it or starting them for validation.

@@ -1,0 +1,31 @@
+services:
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: radeon-ollama
+    user: 1000:1000
+    group_add:
+      - ${VIDEO_GID:-44}
+      - ${RENDER_GID:-991}
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    ports:
+      - ${INFERENCE_BIND_ADDRESS:-127.0.0.1}:${OLLAMA_PORT:-11434}:11434/tcp
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    volumes:
+      - ./data/:/state/:rw
+      - /tank/models/ollama/:/models/:rw
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ollama-net
+
+networks:
+  ollama-net:
+    name: ollama-net

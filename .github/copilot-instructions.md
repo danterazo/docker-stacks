@@ -187,6 +187,11 @@
   and hosts immich, plex-video, and tautulli. Tautulli also runs on LXCs
   108 (development plex-video) and 120 (plex-music). Hostnames such as caddy
   and adguardhome must be disambiguated by guest ID and current owner.
+- radeon-vm is VM 105 and hosts the separate ollama and vllm stacks. Ollama
+  is the primary engine; vllm is opt-in through its evaluation Compose profile.
+  Keep both stack directories and .common in its sparse checkout. Routine
+  updates skip stacks with no active Compose services; do not enable the
+  evaluation profile implicitly or treat absent GPU passthrough as ready.
 - Shared code such as bootstrap.sh and .common/ may affect multiple
   mapped deployments. Establish the affected targets before validation.
 - Required bootstrap during an approved deployment has standing user approval,

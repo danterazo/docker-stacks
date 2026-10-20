@@ -21,6 +21,9 @@ case "${HOSTNAME%%.*}" in
 nvidia-vm)
 	export PATH="$PATH:/docker/plex-video:/docker/immich"
 	;;
+radeon-vm)
+	export PATH="$PATH:/docker/ollama:/docker/vllm"
+	;;
 *)
 	export PATH="$PATH:/docker/${HOSTNAME%%.*}"
 	;;
