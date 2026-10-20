@@ -1,34 +1,4 @@
 services:
-  gluetun:
-    image: qmcgaw/gluetun:latest #v3.41.3
-    container_name: gluetun
-    environment:
-      PUID: 1000
-      PGID: 1000
-      SERVER_CITIES: Miami
-      PORT_FORWARD_ONLY: "on"
-      VPN_PORT_FORWARDING: "on"
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    ports:
-      - 0.0.0.0:8090:8090 # qbittorrent web UI
-    env_file:
-      - vpn.env
-      - .vpn.secrets
-    volumes:
-      - ./vpn/:/gluetun/:rw
-    security_opt:
-      - no-new-privileges:true
-    restart: always
-    healthcheck:
-      test: [CMD, /gluetun-entrypoint, healthcheck]
-      interval: 1m
-      timeout: 10s
-      retries: 3
-      start_period: 2m
-
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
@@ -58,6 +28,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    environment:
+      PUID: 1000
+      PGID: 1000
+      SERVER_CITIES: Miami
+      PORT_FORWARD_ONLY: "on"
+      VPN_PORT_FORWARDING: "on"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 0.0.0.0:8090:8090 # qbittorrent web UI
+    env_file:
+      - vpn.env
+      - .vpn.secrets
+    volumes:
+      - ./vpn/:/gluetun/:rw
+    security_opt:
+      - no-new-privileges:true
+    restart: always
+    healthcheck:
+      test: [CMD, /gluetun-entrypoint, healthcheck]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 2m
 
 volumes:
   qbittorrent_nfs:

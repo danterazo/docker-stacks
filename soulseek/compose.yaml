@@ -1,6 +1,32 @@
 services:
+  soulseek:
+    image: slskd/slskd:latest
+    container_name: soulseek
+    environment:
+      SLSKD_VPN: "true"
+      SLSKD_VPN_PORT_FORWARDING: "true"
+      SLSKD_VPN_GLUETUN_URL: http://127.0.0.1:8000
+      SLSKD_VPN_GLUETUN_TIMEOUT: "5000"
+      SLSKD_VPN_POLLING_INTERVAL: "5000"
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./db/:/app/data/:rw
+      - ./logs/:/app/logs/:rw
+      - ./slskd.yml:/app/slskd.yml:rw
+      - soulseek_nfs:/app/:rw
+    restart: unless-stopped
+    network_mode: service:gluetun # use VPN
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    security_opt:
+      - no-new-privileges:true
+
   gluetun:
-    image: qmcgaw/gluetun:latest #v3.41.3
+    image: qmcgaw/gluetun:latest
     container_name: gluetun
     environment:
       PUID: 1000
@@ -28,32 +54,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 2m
-
-  soulseek:
-    image: slskd/slskd:latest
-    container_name: soulseek
-    environment:
-      SLSKD_VPN: "true"
-      SLSKD_VPN_PORT_FORWARDING: "true"
-      SLSKD_VPN_GLUETUN_URL: http://127.0.0.1:8000
-      SLSKD_VPN_GLUETUN_TIMEOUT: "5000"
-      SLSKD_VPN_POLLING_INTERVAL: "5000"
-    env_file:
-      - .env
-      - .secrets
-    volumes:
-      - ./db/:/app/data/:rw
-      - ./logs/:/app/logs/:rw
-      - ./slskd.yml:/app/slskd.yml:rw
-      - soulseek_nfs:/app/:rw
-    restart: unless-stopped
-    network_mode: service:gluetun # use VPN
-    depends_on:
-      gluetun:
-        condition: service_healthy
-        restart: true
-    security_opt:
-      - no-new-privileges:true
 
 volumes:
   soulseek_nfs:
