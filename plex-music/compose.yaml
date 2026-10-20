@@ -44,14 +44,14 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,rw,noatime,nfsvers=4,soft
+      o: addr=192.168.20.42,rw,noatime,nfsvers=4,hard
       device: ":/tank/media/music/"
 
   audiobooks_nfs:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,rw,noatime,nfsvers=4,soft
+      o: addr=192.168.20.42,rw,noatime,nfsvers=4,hard
       device: ":/tank/media/audiobooks/"
 
   backups_nfs:
