@@ -16,22 +16,16 @@ services:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     volumes:
-      - type: bind
-        source: ./data/ollama
-        target: /state
-        bind:
-          create_host_path: false
-      - type: bind
-        source: /tank/models/ollama
-        target: /models
-        bind:
-          create_host_path: false
+      - ./data/ollama/:/state/:rw
+      - /tank/models/ollama/:/models/:rw
     healthcheck:
       test: [CMD, ollama, list]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - radeon-vm-net
 
   vllm:
     image: blivioniag/vllm-rdna:v0.31.0-extras
@@ -51,17 +45,8 @@ services:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     volumes:
-      - type: bind
-        source: ./data/vllm
-        target: /state
-        bind:
-          create_host_path: false
-      - type: bind
-        source: /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}
-        target: /model
-        read_only: true
-        bind:
-          create_host_path: false
+      - ./data/vllm/:/state/:rw
+      - /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}/:/model/:ro
     command:
       - serve
       - /model
@@ -89,6 +74,8 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15m
+    networks:
+      - radeon-vm-net
 
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
@@ -102,12 +89,7 @@ services:
     devices:
       - /dev/dri:/dev/dri
     volumes:
-      - type: bind
-        source: /tank/models
-        target: /models
-        read_only: true
-        bind:
-          create_host_path: false
+      - /tank/models/:/models/:ro
     command:
       - --host
       - 0.0.0.0
@@ -131,3 +113,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5m
+    networks:
+      - radeon-vm-net
+
+networks:
+  radeon-vm-net:
+    name: radeon-vm-net
