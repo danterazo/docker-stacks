@@ -9,8 +9,8 @@ services:
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
-      - backups_nfs:/backups/:rw
-      - videos_nfs:/media/videos/:rw
+      - backups_virtiofs:/backups/:rw
+      - videos_virtiofs:/media/videos/:rw
       - /dev/shm/plex-transcode/:/transcode/:rw
     networks:
       - plex-video-net
@@ -40,19 +40,17 @@ networks:
     name: plex-video-net
 
 volumes:
-  videos_nfs:
+  videos_virtiofs: # Proxmox dir mapping plex-videos -> /tank/media/videos (VM 101 virtiofs4)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/media/videos/"
+      type: virtiofs
+      device: plex-videos
 
-  backups_nfs:
+  backups_virtiofs: # plex-video-backups -> /tank/backups/apps/plex-video (virtiofs5)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/backups/apps/plex-video/"
+      type: virtiofs
+      device: plex-video-backups
 
 x-dockge:
   urls:

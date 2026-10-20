@@ -11,7 +11,7 @@ services:
     # cpus: 8
     volumes:
       - data_virtiofs:/data/:rw
-      - photography_nfs:/external/photography/:rw
+      - photography_virtiofs:/external/photography/:rw
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - .env
@@ -45,7 +45,7 @@ services:
     # cpus: 8
     volumes:
       - /dev/bus/usb:/dev/bus/usb
-      - models_nfs:/cache/:rw
+      - models_virtiofs:/cache/:rw
       - /etc/group:/etc/group:ro
       - /etc/passwd:/etc/passwd:ro
     env_file:
@@ -126,7 +126,7 @@ services:
       - immich-net
     volumes:
       - ./data/selfie-timelapse/config/:/app/config:rw
-      - selfies_nfs:/app/output:rw
+      - selfies_virtiofs:/app/output:rw
 
 networks:
   immich-net:
@@ -139,26 +139,23 @@ volumes:
       type: virtiofs
       device: immich-data
 
-  photography_nfs:
+  photography_virtiofs: # immich-photography -> /tank/media/photos/photography (virtiofs1)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/media/photos/photography/"
+      type: virtiofs
+      device: immich-photography
 
-  models_nfs:
+  models_virtiofs: # immich-models -> /tank/models/immich (virtiofs2)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/models/immich/"
+      type: virtiofs
+      device: immich-models
 
-  selfies_nfs:
+  selfies_virtiofs: # immich-selfies -> /tank/media/photos/related/immich-selfie-timelapse (virtiofs3)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/media/photos/related/immich-selfie-timelapse/"
+      type: virtiofs
+      device: immich-selfies
 
 x-dockge:
   urls:
