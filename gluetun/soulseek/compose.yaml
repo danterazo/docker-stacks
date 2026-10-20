@@ -1,0 +1,69 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest #v3.41.3
+    container_name: gluetun
+    environment:
+      PUID: 1000
+      PGID: 1000
+      SERVER_CITIES: Chicago
+      PORT_FORWARD_ONLY: "on"
+      VPN_PORT_FORWARDING: "on"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 0.0.0.0:5030:5030/tcp # soulseek web UI
+    env_file:
+      - vpn.env
+      - .vpn.secrets
+    volumes:
+      - ./vpn/:/gluetun/:rw
+    security_opt:
+      - no-new-privileges:true
+    restart: always
+    healthcheck:
+      test: [CMD, /gluetun-entrypoint, healthcheck]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 2m
+
+  soulseek:
+    image: slskd/slskd:latest
+    container_name: soulseek
+    environment:
+      SLSKD_VPN: "true"
+      SLSKD_VPN_PORT_FORWARDING: "true"
+      SLSKD_VPN_GLUETUN_URL: http://127.0.0.1:8000
+      SLSKD_VPN_GLUETUN_TIMEOUT: "5000"
+      SLSKD_VPN_POLLING_INTERVAL: "5000"
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./db/:/app/data/:rw
+      - ./logs/:/app/logs/:rw
+      - ./slskd.yml:/app/slskd.yml:rw
+      - soulseek_nfs:/app/:rw
+    restart: unless-stopped
+    network_mode: service:gluetun # use VPN
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  soulseek_nfs:
+    name: gluetun_soulseek_nfs
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      device: ":/tank/downloads/soulseek/"
+
+x-dockge:
+  urls:
+    - https://soulseek.samskeyti.net/

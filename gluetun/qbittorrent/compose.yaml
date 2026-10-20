@@ -1,0 +1,73 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest #v3.41.3
+    container_name: gluetun
+    environment:
+      PUID: 1000
+      PGID: 1000
+      SERVER_CITIES: Miami
+      PORT_FORWARD_ONLY: "on"
+      VPN_PORT_FORWARDING: "on"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 0.0.0.0:8090:8090 # qbittorrent web UI
+    env_file:
+      - vpn.env
+      - .vpn.secrets
+    volumes:
+      - ./vpn/:/gluetun/:rw
+    security_opt:
+      - no-new-privileges:true
+    restart: always
+    healthcheck:
+      test: [CMD, /gluetun-entrypoint, healthcheck]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 2m
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      PUID: 1000
+      PGID: 1000
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./state/:/config/:rw
+      - ./config/:/config/qBittorrent/:rw
+      - ./ui/:/ui/:rw
+      - ./modcache/:/modcache/:rw
+      - qbittorrent_nfs:/downloads/:rw
+    network_mode: service:gluetun # use VPN
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'curl -s http://localhost:8090/api/v2/transfer/info | jq -e ''.connection_status == "connected"'' > /dev/null || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  qbittorrent_nfs:
+    name: gluetun_qbittorrent_nfs
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4,timeo=600,retrans=2
+      device: ":/tank/downloads/qbittorrent/"
+
+x-dockge:
+  urls:
+    - https://qb.samskeyti.net/
