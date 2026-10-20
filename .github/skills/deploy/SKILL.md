@@ -118,6 +118,11 @@ Use the integrated terminal directly for mutations; delegate only bounded
 read-only checks when useful. Do not filter interactive commands through
 pipelines or use pagers for status output.
 
+If terminal transcripts are unreliable, save known-noninteractive helper output
+and its real exit status in separate per-guest files under `/tmp/ai`, after
+checking the directory's type and ownership. Read those records to recover
+completion; do not rerun an uncertain update without explicit approval.
+
 ## Completion
 
 - Run targets sequentially and keep output bounded. A zero exit status from
