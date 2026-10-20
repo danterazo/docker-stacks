@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# exit would close the caller's shell if this were sourced
+(return 0 2>/dev/null) && {
+	printf '%s\n' 'vpn-location.sh must be run, not sourced' >&2
+	return 1
+}
 set -o pipefail
 
 case "${1:-logs}" in
