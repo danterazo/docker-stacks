@@ -35,8 +35,6 @@ services:
     environment:
       PUID: 1000
       PGID: 1000
-      PORT_FORWARD_ONLY: "on"
-      VPN_PORT_FORWARDING: "on"
     cap_add:
       - NET_ADMIN
     devices:
