@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-20"
-  timestamp: "1:52:57 PM"
+  timestamp: "3:02:52 PM"
 
 cluster:
   entrypoint:
@@ -26,14 +26,14 @@ docker_guests:
     address: 192.168.30.101
     pool: prod
     type: qemu
-    tags: [docker, gpu]
+    tags: [docker, gpu, nas]
   102:
     hostname: immich
     node: kex
     address: 192.168.30.102
     pool: dev
     type: lxc
-    tags: [docker, gpu]
+    tags: [docker, gpu, nas]
   103:
     hostname: upsnap
     node: kex
@@ -54,28 +54,28 @@ docker_guests:
     address: 192.168.30.108
     pool: dev
     type: lxc
-    tags: [docker, gpu]
+    tags: [docker, gpu, nas]
   116:
     hostname: qbittorrent
     node: kex
     address: 192.168.30.116
     pool: prod
     type: lxc
-    tags: [docker, vpn]
+    tags: [docker, nas, vpn]
   117:
     hostname: soulseek
     node: kex
     address: 192.168.30.117
     pool: prod
     type: lxc
-    tags: [docker, vpn]
+    tags: [docker, nas, vpn]
   120:
     hostname: plex-music
     node: kex
     address: 192.168.30.120
     pool: prod
     type: lxc
-    tags: [docker]
+    tags: [docker, nas]
   200:
     hostname: adguardhome
     node: cerulean
