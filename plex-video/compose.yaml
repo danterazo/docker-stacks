@@ -44,14 +44,14 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/media/videos/"
 
   backups_nfs:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/backups/apps/plex-video/"
 
 x-dockge:

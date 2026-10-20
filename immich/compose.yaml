@@ -137,28 +137,28 @@ volumes:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/media/photos/immich/"
 
   photography_nfs:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/media/photos/photography/"
 
   models_nfs:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/models/immich/"
 
   selfies_nfs:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
       device: ":/tank/media/photos/related/immich-selfie-timelapse/"
 
 x-dockge:
