@@ -1,5 +1,5 @@
 {
-	"REPLACE_WITH_PATH_1": {
+	"/downloads/working/queue": {
 		"add_torrent_params": {
 			"category": "REPLACE_WITH_CATEGORY",
 			"download_limit": -1,
