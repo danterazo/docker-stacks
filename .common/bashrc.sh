@@ -139,3 +139,8 @@ if ! shopt -oq posix; then
 		. /etc/bash_completion
 	fi
 fi
+
+# shared Starship prompt; only VMs have /configs
+if command -v starship >/dev/null 2>&1 && [[ -r /configs/starship/init.sh ]] && source /configs/starship/init.sh; then
+	eval "$(starship init bash)"
+fi

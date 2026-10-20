@@ -259,6 +259,25 @@ else
 	exit 1
 fi
 
+: 'VM SHARED REPOSITORIES'
+# LXCs skip this; VMs get /configs and /scripts plus a scheduled fast-forward
+if systemd-detect-virt --vm --quiet; then
+	sudo apt-get install -y starship || exit 1
+
+	for repository in configs scripts; do
+		if [ ! -d "/${repository}/.git" ]; then
+			sudo install -d -o dante -g dante "/${repository}" || exit 1
+			dante_git clone "git@github.com:danterazo/${repository}.git" "/${repository}" || exit 1
+		fi
+	done
+
+	SYNC_JOB='*/15 * * * * [ -x /scripts/utils/pull-shared-repos.sh ] && /scripts/utils/pull-shared-repos.sh'
+	{
+		sudo crontab -u dante -l 2>/dev/null | grep -vF 'pull-shared-repos'
+		printf '%s\n' "${SYNC_JOB}"
+	} | sudo crontab -u dante - || exit 1
+fi
+
 # use canonical's suggested marker files
 sudo touch /var/lib/update-notifier/hide-esm-in-motd
 sudo touch /var/lib/ubuntu-advantage/hide-esm-in-motd
