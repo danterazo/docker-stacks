@@ -30,7 +30,7 @@ fi
 
 : 'INSTALL PACKAGES'
 sudo apt-get update &&
-	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release fastfetch direnv lrzsz || exit 1
+	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release fastfetch direnv lrzsz shfmt || exit 1
 
 # remove the obsolete fastfetch PPA if present
 if grep -Rqs 'ppa:zhangsongcui3371/fastfetch' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
