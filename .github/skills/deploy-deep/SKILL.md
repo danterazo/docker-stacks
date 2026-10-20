@@ -586,6 +586,9 @@ networking to make a probe succeed without the applicable approval.
      redact tokens and never dump `Preferences.xml`. Do not change ports,
      firewall rules, preferences, or network mode during diagnosis. A passing
      localhost healthcheck never overrides a failing published endpoint.
+     Plex video (VM 101) has `secureConnections="0"` (Required): plain HTTP
+     from any non-loopback client gets an empty reply, so probe it with
+     `curl -k https://<ip>:32400/identity` before treating it as down.
    - Run the applicable Functional Service Checks above; an inherited Docker
      healthcheck alone does not establish external app accessibility.
    - For each deployed Caddy instance, run `caddy validate` and pin checks

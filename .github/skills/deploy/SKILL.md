@@ -148,6 +148,10 @@ completion; do not rerun an uncertain update without explicit approval.
   writeback (D state in `nfs_wb_all`). Wait for that process to exit, rerun
   `dupull` on the same guest once, and `docker rename` any leftover
   `<hash>_<name>` container back to its service name.
+- Docker never updates an existing named volume's `driver_opts`. When a
+  published change edits NFS/virtiofs volume options without renaming the
+  volume, `docker compose down` that stack and `docker volume rm` its affected
+  volumes before `dupull`; share data is unaffected.
 - Missing output or an absent exit code means unknown, not failed or complete.
   Recover the original command result first; if unavailable, use one bounded
   read-only check to establish what is known. A matching Git SHA alone does
