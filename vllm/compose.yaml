@@ -12,7 +12,7 @@ services:
     env_file: .env
     shm_size: 4gb
     ports:
-      - ${INFERENCE_BIND_ADDRESS:-127.0.0.1}:${VLLM_PORT:-8000}:8000/tcp
+      - 8000:8000/tcp
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
