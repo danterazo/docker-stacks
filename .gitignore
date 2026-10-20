@@ -27,6 +27,7 @@ hivenet/machine-config/machine-id
 
 # ignore temporary files
 *.swp
+*.sync-conflict-*
 
 # ignore trashes
 *.filen.trash.local/
