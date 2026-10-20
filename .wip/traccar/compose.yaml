@@ -10,7 +10,8 @@ services:
     #      - 5002
     ports:
       - 8082:8082/tcp # UI
-      - 5002:5002 # service
+      - 5002:5002/tcp # service
+      - 5002:5002/udp # service
     volumes:
       - ./logs/:/opt/traccar/logs/:rw
       - ./data/:/opt/traccar/data/:rw

@@ -43,7 +43,7 @@ services:
       net.ipv6.conf.all.disable_ipv6: "0"
       net.ipv6.conf.default.disable_ipv6: "0"
     ports:
-      - 0.0.0.0:8090:8090 # qbittorrent web UI
+      - 0.0.0.0:8090:8090/tcp # qbittorrent web UI
     env_file:
       - .env
       - .secrets
