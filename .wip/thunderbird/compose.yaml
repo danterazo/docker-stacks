@@ -8,7 +8,7 @@ services:
     #      args:
     #        THUNDERBIRD_VERSION: "1.38.0.2"
     #ports:
-    #- 5900:5900
+    #- 5900:5900/tcp
     volumes:
       - ./config/:/config/:rw
       - ./mail/:/mail/:rw
