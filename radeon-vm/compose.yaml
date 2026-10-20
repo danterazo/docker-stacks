@@ -24,7 +24,6 @@ services:
       - type: bind
         source: /tank/models/ollama
         target: /models
-        read_only: true
         bind:
           create_host_path: false
     healthcheck:
