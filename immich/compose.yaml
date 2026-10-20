@@ -10,7 +10,7 @@ services:
     runtime: nvidia
     # cpus: 8
     volumes:
-      - data_nfs:/data/:rw
+      - data_virtiofs:/data/:rw
       - photography_nfs:/external/photography/:rw
       - /etc/localtime:/etc/localtime:ro
     env_file:
@@ -133,12 +133,11 @@ networks:
     name: immich-net
 
 volumes:
-  data_nfs:
+  data_virtiofs: # Proxmox dir mapping immich-data -> /tank/media/photos/immich (VM 101 virtiofs0)
     driver: local
     driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
-      device: ":/tank/media/photos/immich/"
+      type: virtiofs
+      device: immich-data
 
   photography_nfs:
     driver: local
