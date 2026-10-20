@@ -31,7 +31,6 @@ services:
     environment:
       PUID: 1000
       PGID: 1000
-      SERVER_CITIES: Chicago
       PORT_FORWARD_ONLY: "on"
       VPN_PORT_FORWARDING: "on"
     cap_add:
