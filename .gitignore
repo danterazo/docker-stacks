@@ -4,12 +4,15 @@
 *.credential*
 
 # ignore sensitive files (TODO: remove)
-gluetun/data/
-gluetun/*/config/
-gluetun/oauth2/
-gluetun/soulseek/slskd.yml
-gluetun/soulseek/db/
-gluetun/soulseek/logs/
+qbittorrent/vpn/
+qbittorrent/config/
+qbittorrent/state/
+qbittorrent/modcache/
+qbittorrent/oauth2/
+soulseek/vpn/
+soulseek/slskd.yml
+soulseek/db/
+soulseek/logs/
 radicale/configs/users
 cloudflare-ddns/config.json
 hivenet/machine-config/machine-id
