@@ -2,6 +2,10 @@
 *.secrets
 *oauth2-proxy.cfg
 *.credential*
+wg*.conf
+.env.local
+.env.*.local
+/gluetun/
 
 # ignore sensitive files (TODO: remove)
 qbittorrent/vpn/

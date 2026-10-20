@@ -86,8 +86,8 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   explicitly asks for OS upgrades, with separate approval for package
   upgrades and removal.
 - Neither step is stack-scoped. Both cover every top-level stack in the
-  guest checkout (`/docker/*/compose.y*ml`), including `include:` children
-  such as `gluetun/qbittorrent` and `gluetun/soulseek`. `dpull` runs plain
+  guest checkout (`/docker/*/compose.y*ml`), including any `include:` children.
+  qBittorrent and Soulseek are independent top-level stacks. `dpull` runs plain
   `git pull`, then per stack `docker compose pull --ignore-buildable`,
   `build --pull --no-cache`, and `up --build -d --remove-orphans`, returning
   on the first failure.

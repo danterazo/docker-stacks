@@ -45,7 +45,7 @@ services:
     ports:
       - 0.0.0.0:8090:8090 # qbittorrent web UI
     env_file:
-      - vpn.env
+      - .env
       - .vpn.secrets
     volumes:
       - ./vpn/:/gluetun/:rw

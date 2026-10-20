@@ -35,7 +35,7 @@ services:
     ports:
       - 0.0.0.0:5030:5030/tcp # soulseek web UI
     env_file:
-      - vpn.env
+      - .env
       - .vpn.secrets
     volumes:
       - ./vpn/:/gluetun/:rw
