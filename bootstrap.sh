@@ -217,7 +217,7 @@ sudo rm -f /etc/profile.d/00_lxc-details.sh || true
 # remove stale bash profile overrides
 sudo rm -f /root/.bash_profile /home/dante/.bash_profile || true
 
-# link login scripts into /etc/profile.d; other .common scripts are standalone helpers
+# link login scripts into /etc/profile.d; executable helpers belong in .common/bin
 for base in aliases.sh auto-cd.sh fastfetch.sh functions.sh; do
 	script="${HOME_DIR}/.common/${base}"
 	[ -e "$script" ] || continue
