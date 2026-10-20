@@ -1,6 +1,6 @@
 ---
 name: refresh-deployments
-description: "Refresh Docker guests in deployments.yaml through read-only Proxmox discovery via Cerulean. Use for Docker guest detection, PVE docker tags, deployment-map refreshes, and LXC or VM address updates."
+description: "Refresh Docker guests in deployments.yaml through read-only Proxmox discovery via Cerulean. Use before every regular or deep deployment, for Docker guest detection, PVE docker tags, deployment-map refreshes, and LXC or VM address updates."
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -13,6 +13,36 @@ job or a deployment command. Keep operational notes here, not in the YAML.
 
 To apply published code changes to running workloads, use `/deploy` instead.
 Refreshing this map does not deploy code or authorize workload changes.
+
+## Mandatory Pre-Deployment Refresh
+
+Every regular or deep deployment must complete this workflow first, before
+selecting guest targets, publishing deployment commits, or choosing guest
+SSH/access routes. Read the existing map as discovery input, not as current
+ownership evidence. Use the configured cluster entrypoint to discover live
+owners before accessing guests; do not SSH to a cached owner to discover
+whether the guest still belongs there.
+
+- A deployment request includes approval for this read-only cluster discovery
+  and local metadata update. Use its existing access approvals; ask only for
+  genuinely additional access or scope. Refreshing cluster-wide metadata does
+  not authorize deploying additional guests or probing unrelated workloads.
+- Complete Discovery, Merge Rules and Metadata Format, and Update and Validate
+  below. Save and validate `deployments.yaml`, including its America/Chicago
+  timestamp, even when guest placements have not changed. Preserve unrelated
+  edits and comments. Never commit or push the refresh without approval; its
+  local uncommitted diff does not block deployment of published code.
+- If required discovery is incomplete, ownership is ambiguous, access fails,
+  or validation fails, stop before publishing or guest deployment operations.
+  Report the blocker; do not fall back to the old map or publish a partial
+  snapshot. Preserve known addresses under the existing merge rules when no
+  usable address is returned; that alone is not a refresh failure.
+- Resolve the requested targets and their access routes from the refreshed
+  map and the collected live inventory: LXCs through their current owning
+  Proxmox node with `pct exec`, VMs through an existing trusted guest alias.
+  Reuse that inventory for preflight rather than repeating full discovery;
+  recheck volatile ownership and state immediately before guest operations.
+  If placement changes during rollout, refresh again before continuing.
 
 ## How to Run
 
@@ -36,8 +66,9 @@ Refreshing this map does not deploy code or authorize workload changes.
   commands and use the repo root as the working directory.
 - Read `.github/copilot-instructions.md` and `deployments.yaml` first. Check
   Git status and preserve unrelated edits. Do not create backups inside Git.
-- An explicit invocation requesting a refresh authorizes read-only SSH to
-  the configured entrypoint for that refresh. Otherwise ask before SSH.
+- An explicit invocation requesting a refresh or deployment authorizes
+  read-only SSH to the configured entrypoint for that refresh. Otherwise ask
+  before SSH.
   This skill does not authorize staging, deploying, or restarting anything.
 - Docker VMs, including `nvidia-vm` (101), are first-class Docker guests;
   do not restrict discovery to LXCs. Any approved in-guest Docker daemon

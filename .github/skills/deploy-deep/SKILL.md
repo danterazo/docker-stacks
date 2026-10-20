@@ -13,9 +13,21 @@ Creating this skill, editing code, running local tests, or refreshing the
 deployment map does not authorize a deployment.
 
 For a metadata-only update of local `deployments.yaml`, use
-`/refresh-deployments` instead. Deployment still requires current ownership,
-state, and role discovery; follow the refresh workflow when updating the map,
-without treating that refresh as permission to deploy additional guests.
+`/refresh-deployments` instead.
+
+## Refresh Before Targeting
+
+First follow the mandatory pre-deployment refresh in
+`.github/skills/refresh-deployments/SKILL.md`: complete live discovery, update
+local `deployments.yaml`, and validate it before choosing targets, publishing
+commits, or choosing guest SSH/access routes. A deep deployment request includes
+this metadata refresh; it does not authorize committing the refresh or deploying
+additional guests. Stop if refresh cannot complete; never use a stale map.
+
+Use the refreshed map and the refresh's live inventory for target selection,
+owner-batched preflight, and LXC versus VM access routing. Recheck volatile
+ownership and state immediately before guest operations; if placement changes,
+refresh again before continuing. Do not repeat full discovery unnecessarily.
 
 ## Choose Targets
 

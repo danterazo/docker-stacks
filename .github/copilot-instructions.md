@@ -43,6 +43,15 @@
 
 ## Deployment map and validation
 
+- Every deployment, regular or deep, must first complete the mandatory
+  pre-deployment refresh in `.github/skills/refresh-deployments/SKILL.md`.
+  Update and validate local `deployments.yaml` from live cluster discovery
+  before selecting guest targets, publishing deployment commits, or choosing
+  guest SSH/access routes. Use the refreshed owners and guest types to route
+  access; recheck volatile ownership and state before guest operations.
+  If refresh is incomplete or validation fails, stop deployment rather than
+  using the stale map. A deployment request authorizes this local metadata
+  refresh, not committing it or expanding the requested deployment scope.
 - Read the root-level deployments.yaml before planning deployment or remote
   validation. Match stack directory names to guest hostnames, including
   parent directories for nested stacks, and apply the exceptions below.

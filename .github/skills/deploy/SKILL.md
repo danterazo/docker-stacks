@@ -38,27 +38,35 @@ for full functional, health, log, or visual validation.
 
 ## Target And Publish
 
-1. Read `.github/copilot-instructions.md` and `deployments.yaml`. Confirm the
-   local checkout identity and branch. Preserve and exclude staged, unstaged,
+1. First follow the mandatory pre-deployment refresh in
+   `.github/skills/refresh-deployments/SKILL.md`: complete live discovery,
+   update local `deployments.yaml`, and validate it before selecting targets,
+   publishing commits, or choosing guest SSH/access routes. Stop if the refresh
+   cannot complete; never deploy using a stale map. This metadata update is
+   included in the deployment request, but must remain uncommitted unless
+   separately approved. It does not expand the requested guest scope.
+2. Read `.github/copilot-instructions.md` and the refreshed `deployments.yaml`.
+   Confirm the local checkout identity and branch. Preserve and exclude staged, unstaged,
    and untracked local files; do not commit them.
    Read the current deployment-blocker notes in `/configs/ai/pending-changes.md`.
    Skip and report a selected guest with a known unresolved service/network
    blocker; do not treat `dupull` success as clearing it. Lite mode does not
    discover new application reachability failures.
-2. Fetch `origin/main` and check the local `main` relationship. If local `main`
+3. Fetch `origin/main` and check the local `main` relationship. If local `main`
    has fast-forwardable commits ahead, push them with ordinary `git push` (no
    force). If it is only behind, use the fetched `origin/main` as the target.
    Stop if local `main` and `origin/main` have diverged or the current branch
    is not `main`. Record the resulting published SHA.
-3. Resolve selected guest IDs, current owners, state, and networking role tags
-   from one live cluster inventory. Use only running Docker guests; report
-   stopped guests as skipped and never start them. Do not infer ownership from
-   the map without rechecking it.
-4. For LXCs, SSH to the current Proxmox owner and use `pct exec`; do not SSH
+4. Resolve selected guest IDs, current owners, state, and networking role tags
+   from the refreshed map and the refresh's live inventory. Use only running
+   Docker guests; report stopped guests as skipped and never start them. Do not infer ownership from
+   cached metadata; recheck ownership and state immediately before guest
+   operations. If placement changes, refresh again before continuing.
+5. For LXCs, SSH to the current Proxmox owner and use `pct exec`; do not SSH
    directly to the LXC. For VMs, use the existing trusted alias and confirm
    `ssh -G <alias>` resolves to `dante`; confirm `id -un` after connecting.
    Run guest Git, Docker, Compose, and helpers as `dante`, without `sudo`.
-5. Batch read-only discovery by owner. Before `dupull`, verify each selected
+6. Batch read-only discovery by owner. Before `dupull`, verify each selected
    guest is the expected hostname, its `/docker` worktree has no local changes,
    its Git operation can fast-forward to the target SHA, and `dante` can reach
    Docker. If a guest has local changes, is divergent, or fails access checks,
