@@ -195,19 +195,22 @@
   it; follow the deploy skill. Those actions outside bootstrap.sh still need
   approval. This exception never bypasses SSH verification or authorizes reboot.
 - Before bootstrap or teardown, audit bind mounts sourced beneath `/docker`:
-  bootstrap may change the `/docker` root and `.git` metadata only. Never
-  recursively chown the worktree, which can change nested service data. If
-  Git cannot update a tracked path as `dante`, inspect that path and stop
-  rather than broadening ownership changes. For Immich, verify PostgreSQL
+  bootstrap may change the `/docker` root and `.git` metadata only. Outside
+  bootstrap, ownership repairs encountered during authorized guest work have
+  standing approval. Use `chown -R dante:dante /docker` only after verifying
+  every affected mount and runtime path can safely use that ownership; otherwise
+  repair compatible repository/config paths and exclude service-managed data.
+  Do not broaden bootstrap's recursive behavior without a separate code change.
+  For Immich, verify PostgreSQL
   `999:999` and the Valkey runtime identity against their bind mounts; do not
   assume Valkey kept the prior Redis image's UID/GID. Compose `user:` changes
   process identity; it does not map host IDs to container IDs.
-- Treat pre-deployment container health as a hard gate. Do not mutate a guest
+- Treat pre-deployment container health as a hard gate. Do not deploy a guest
   with unhealthy, restarting, or exited containers, or restart counts that
   continue increasing during baseline observation. A weaker readiness result
   such as `pg_isready` does not override a failed database healthcheck. Resolve
-  pre-existing failures separately; never repair permissions or restart as
-  an implicit part of deployment.
+  pre-existing failures separately; authorized ownership repairs may address a
+  verified cause, but do not change modes or restart services implicitly.
 - Report and preserve untracked guest repository files during upgrades unless
   cleanup is specifically approved. Stop on collisions or unsafe tracked
   changes; leave non-conflicting untracked files for follow-up handling.
@@ -264,10 +267,12 @@
   Root SSH to a Proxmox owner is for pct administration, not guest Git.
 - Before the first Git command, inspect ownership of /docker and its .git
   metadata. Inside guests, /docker and its contents should be dante:dante.
-  There is standing approval to repair mismatched ownership of relevant
-  repository paths to dante:dante when needed for Git; notify the user.
+  There is standing approval to repair ownership problems encountered during
+  authorized work, including relevant repository and compatible application
+  config paths, to dante:dante; notify the user. A blanket recursive repair is
+  allowed only after auditing all affected paths and runtime identities.
   Keep repairs inside /docker, do not follow symlinks outside it, and do not
-  recursively change mounted application data as an implicit Git repair.
+  change service-specific database/runtime ownership to satisfy Git access.
 - Root can access dante-owned files, but Git's dubious-ownership safeguard
   is separate from filesystem permissions. Prevent the warning by selecting
   dante before Git, rather than probing Git as root or hiding stderr.
