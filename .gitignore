@@ -41,6 +41,7 @@ hivenet/machine-config/machine-id
 # ignore internal repos
 *.git/
 *source/
+/.wip/tabby/source.7z
 
 # ignore data backed up elsewhere
 */data/
