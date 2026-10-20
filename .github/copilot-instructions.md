@@ -250,6 +250,11 @@
   stopped guests or overwrite unrelated local changes without required approval.
 - Share stack shell helpers through `.common`, using stack-local autoenv aliases
   rather than command symlinks. Do not restore the global dotfiles IPInfo alias.
+- Prefer one public `.env` and one ignored `.secrets` file per stack. Group
+  service-specific settings with commented sections instead of separate VPN
+  secret files unless a concrete isolation requirement calls for it. Use
+  `gluetun/` for Gluetun runtime configuration and mirror that name in reference
+  examples. Update Git and code-sync exclusions before moving private files.
 - Keep only PUID and PGID in Compose `environment` blocks. Put other
   non-secret environment keys in the service's `.env` file, or its existing
   dedicated env file such as `vpn.env`; preserve service-specific `env_file`

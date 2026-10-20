@@ -10,11 +10,13 @@ wg*.conf
 
 # ignore sensitive files (TODO: remove)
 qbittorrent/vpn/
+qbittorrent/gluetun/
 qbittorrent/config/
 qbittorrent/state/
 qbittorrent/modcache/
 qbittorrent/oauth2/
 soulseek/vpn/
+soulseek/gluetun/
 soulseek/slskd.yml
 soulseek/db/
 soulseek/logs/
