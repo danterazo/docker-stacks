@@ -5,6 +5,7 @@ dpull() {
 	# local variables
 	local root_dir="/docker"
 	local app_dir
+	local active_services
 
 	# check Git init status
 	if [ ! -d "$root_dir/.git" ]; then
@@ -22,6 +23,8 @@ dpull() {
 		[ -f "$app_dir/compose.yaml" ] || [ -f "$app_dir/compose.yml" ] || continue
 
 		cd "$app_dir" || return 1
+		active_services=$(docker compose config --services) || return 1
+		[ -n "$active_services" ] || continue
 		docker compose pull --ignore-buildable || return 1
 		docker compose build --pull --no-cache || return 1
 		docker compose up --build -d --remove-orphans || return 1
