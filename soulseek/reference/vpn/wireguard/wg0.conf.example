@@ -1,0 +1,3 @@
+[Interface]
+PrivateKey = REPLACE_WITH_PROTON_WIREGUARD_PRIVATE_KEY
+Address = 10.2.0.2/32, 2a07:b944::2:2/128

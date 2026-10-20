@@ -237,6 +237,16 @@
 
 ## Compose formatting
 
+- Put examples, samples, and reference-only templates under the owning app's
+  `reference/` directory, including new examples of ignored configuration.
+  Use sanitized placeholders for credentials; never version real secret values.
+  Keep runtime data, databases, caches, logs, and generated keys out of examples.
+- Reconcile ignored configuration against the currently verified owning LXC
+  before deriving examples. Live guest files are authoritative; preserve
+  differing guest variants instead of letting the last pull win. Do not start
+  stopped guests or overwrite unrelated local changes without required approval.
+- Share stack shell helpers through `.common`, using stack-local autoenv aliases
+  rather than command symlinks. Do not restore the global dotfiles IPInfo alias.
 - Keep only PUID and PGID in Compose `environment` blocks. Put other
   non-secret environment keys in the service's `.env` file, or its existing
   dedicated env file such as `vpn.env`; preserve service-specific `env_file`

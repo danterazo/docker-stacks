@@ -6,6 +6,7 @@ wg*.conf
 .env.local
 .env.*.local
 /gluetun/
+/.guest-configs/
 
 # ignore sensitive files (TODO: remove)
 qbittorrent/vpn/

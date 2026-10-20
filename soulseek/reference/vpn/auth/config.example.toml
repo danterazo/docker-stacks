@@ -1,0 +1,5 @@
+[[roles]]
+name = "REPLACE_WITH_NAME"
+routes = ["GET /v1/portforward", "GET /v1/publicip/ip"]
+auth = "REPLACE_WITH_AUTH"
+apikey = "REPLACE_WITH_APIKEY"

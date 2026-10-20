@@ -1,0 +1,10 @@
+{
+	"Seeding": {
+		"download_path": null,
+		"inactive_seeding_time_limit": -2,
+		"ratio_limit": -2,
+		"save_path": "REPLACE_WITH_SAVE_PATH",
+		"seeding_time_limit": -2,
+		"share_limit_action": "REPLACE_WITH_SHARE_LIMIT_ACTION"
+	}
+}
