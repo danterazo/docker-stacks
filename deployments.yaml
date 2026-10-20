@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-10-16"
-  timestamp: "7:25:57 PM"
+  date: "2026-10-20"
+  timestamp: "4:23:01 AM"
 
 cluster:
   entrypoint:
@@ -19,81 +19,95 @@ docker_guests:
     address: 192.168.30.100
     pool: prod
     type: lxc
+    tags: [docker, security]
   101:
     hostname: nvidia-vm
     node: kex
     address: 192.168.30.101
     pool: prod
     type: qemu
+    tags: [docker, gpu]
   102:
     hostname: immich
     node: kex
     address: 192.168.30.102
     pool: dev
     type: lxc
+    tags: [docker, gpu]
   103:
     hostname: upsnap
     node: kex
     address: 192.168.30.103
     pool: dev
     type: lxc
+    tags: [docker]
   104:
     hostname: spoolman
     node: cerulean
     address: 192.168.30.104
     pool: prod
     type: lxc
+    tags: [docker]
   108:
     hostname: plex-video
     node: kex
     address: 192.168.30.108
     pool: dev
     type: lxc
+    tags: [docker, gpu]
   116:
     hostname: gluetun
     node: kex
     address: 192.168.30.116
     pool: prod
     type: lxc
+    tags: [docker, vpn]
   120:
     hostname: plex-music
     node: kex
     address: 192.168.30.120
     pool: prod
     type: lxc
+    tags: [docker]
   200:
     hostname: adguardhome
     node: cerulean
     address: 192.168.30.200
     pool: prod
     type: lxc
+    tags: [docker, networking, primary]
   201:
     hostname: adguardhome
     node: kex
     address: 192.168.30.201
     pool: prod
     type: lxc
+    tags: [docker, networking, secondary]
   202:
     hostname: adguardhome
     node: cerulean
     address: 192.168.30.202
     pool: prod
     type: lxc
+    tags: [docker, networking, secondary]
   203:
     hostname: caddy
     node: cerulean
     address: 192.168.30.203
     pool: prod
     type: lxc
+    tags: [docker, networking, primary]
   204:
     hostname: caddy
     node: kex
     address: 192.168.30.204
     pool: prod
     type: lxc
+    tags: [docker, networking, secondary]
   205:
     hostname: caddy
     node: cerulean
     address: 192.168.30.205
     pool: prod
     type: lxc
+    tags: [docker, networking, secondary]
