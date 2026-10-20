@@ -1,0 +1,42 @@
+services:
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: radeon-inference
+    profiles: [gpu]
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    ports:
+      - ${INFERENCE_BIND_ADDRESS:-127.0.0.1}:${INFERENCE_PORT:-8080}:8080/tcp
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - type: bind
+        source: /tank/models
+        target: /models
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --model
+      - /models/${MODEL_FILE:?Set MODEL_FILE to a GGUF path relative to /tank/models}
+      - --alias
+      - radeon
+      - --n-gpu-layers
+      - "99"
+      - --split-mode
+      - layer
+      - --ctx-size
+      - ${CONTEXT_SIZE:-8192}
+      - --parallel
+      - "1"
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/health]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5m
