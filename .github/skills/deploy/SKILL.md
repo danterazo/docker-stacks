@@ -30,13 +30,18 @@ for full functional, health, log, or visual validation.
 - Use existing SSH and Proxmox access for the requested work; do not ask again
   before read-only discovery. Obey tool approval prompts and never bypass
   host-key checking or access failures.
+- Carry an approved deployment through execution and its completion check in
+  the same turn. A clarification of the requested check does not cancel the
+  deployment or require another go-ahead. Progress updates describe work being
+  performed, not suggestions left for the user to request again. Ask only for
+  a genuinely new decision, required approval, or user action that blocks work.
 
 ## Target And Publish
 
 1. Read `.github/copilot-instructions.md` and `deployments.yaml`. Confirm the
    local checkout identity and branch. Preserve and exclude staged, unstaged,
    and untracked local files; do not commit them.
-   Read the current deployment-blocker notes in `/ai/pending-changes.md`.
+   Read the current deployment-blocker notes in `/configs/ai/pending-changes.md`.
    Skip and report a selected guest with a known unresolved service/network
    blocker; do not treat `dupull` success as clearing it. Lite mode does not
    discover new application reachability failures.
@@ -102,8 +107,16 @@ on a Proxmox host.
 `dupull` runs `upgrade` followed by `dpull`. `upgrade` performs APT update,
 dist-upgrade, clean, and autoremove with purge. `dpull` pulls Git, pulls/builds
 images, and runs `docker compose up --build -d --remove-orphans` for every
- top-level stack in `/docker`; it does not use `down -v`. A named stack selects
+top-level stack in `/docker`; it does not use `down -v`. A named stack selects
 guests, but does not make `dupull` stack-scoped.
+
+Capture each invocation's real exit status in the calling shell, print a
+guest-specific completion marker (ID and exit code), and preserve that status
+as the command's exit code. Do not let a final `printf` mask failure. Retain
+explicit Git/package/image/Compose errors even if the helper returns zero.
+Use the integrated terminal directly for mutations; delegate only bounded
+read-only checks when useful. Do not filter interactive commands through
+pipelines or use pagers for status output.
 
 ## Completion
 
@@ -111,9 +124,19 @@ guests, but does not make `dupull` stack-scoped.
   `dupull` is the completion criterion for that guest; its successful Compose
   start commands are the validation. Do not inspect container health, call
   APIs, open webpages, read logs, or run visual checks.
+- Do not add mount, NFS, image-user, or filesystem write-access probes as
+  deployment gates. Use Git/package/image/Compose command errors, not an
+  inability to inspect Docker's private volume directories, to judge the run.
 - On a nonzero exit or explicit pull/build/up error, stop the rollout. Report
   the guest, command phase, exit status, and that later guests were skipped.
   Do not retry or roll back automatically.
+- Missing output or an absent exit code means unknown, not failed or complete.
+  Recover the original command result first; if unavailable, use one bounded
+  read-only check to establish what is known. A matching Git SHA alone does
+  not prove image pulls or Compose succeeded. Do not rerun an uncertain
+  mutation automatically, start another mutation while it may still be running,
+  or declare unrelated guests failed. Preserve the existing terminal recovery
+  and stop-on-error rules; report the exact remaining uncertainty if blocked.
 - Report the pushed/current published SHA, selected guest IDs and owners,
   `dupull` result per guest, and skipped or failed targets. Keep the report
   concise. For deep checks, use `/deploy-deep` as a separate request.
@@ -126,15 +149,15 @@ on success or when stopping for a blocker, using evidence already collected;
 do not add probes, log reads, or a session-history investigation for this step.
 
 - If there is a concrete reusable lesson, make a small targeted update to the
-   relevant deployment skill. Update `.github/copilot-instructions.md` only
-   when the lesson applies across workflows. Preserve concurrent edits and
-   existing approvals, safety gates, and lite-mode limits. This step authorizes
-   these narrow documentation edits, not operational changes or scope expansion.
+  relevant deployment skill. Update `.github/copilot-instructions.md` only
+  when the lesson applies across workflows. Preserve concurrent edits and
+  existing approvals, safety gates, and lite-mode limits. This step authorizes
+  these narrow documentation edits, not operational changes or scope expansion.
 - Record unresolved incidents in the canonical pending ledger with verified
-   evidence, target/path, blocker, and next safe action. Keep temporary runtime
-   observations and unproven hypotheses out of enduring instructions; never
-   record credentials or turn a workaround into a permission exception.
+  evidence, target/path, blocker, and next safe action. Keep temporary runtime
+  observations and unproven hypotheses out of enduring instructions; never
+  record credentials or turn a workaround into a permission exception.
 - Validate changed documentation with `git diff --check` and mention the
-   lesson/update briefly in the final report. Do not commit or push retrospective
-   edits without an explicit request; an earlier deployment push does not cover
-   newly written documentation. If there is no new lesson, make no edits.
+  lesson/update briefly in the final report. Do not commit or push retrospective
+  edits without an explicit request; an earlier deployment push does not cover
+  newly written documentation. If there is no new lesson, make no edits.

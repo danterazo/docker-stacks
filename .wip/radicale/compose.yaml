@@ -6,8 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: radicale
     init: true
-    user: ${PUID}:${PGID}
-    read_only: false # true w/o user above
+    read_only: true
     env_file: .env
     security_opt:
       - no-new-privileges:true

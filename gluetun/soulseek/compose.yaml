@@ -3,7 +3,6 @@ services:
     image: slskd/slskd:latest
     container_name: soulseek
     env_file: .env
-    user: 1000:1000
     volumes:
       - ./db/:/app/data/:rw
       - ./slskd.yml:/app/slskd.yml:rw

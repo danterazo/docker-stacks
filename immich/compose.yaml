@@ -9,7 +9,6 @@ services:
       service: nvenc
     runtime: nvidia
     # cpus: 8
-    user: 1000:1000
     volumes:
       - data_nfs:/data/:rw
       - photography_nfs:/external/photography/:rw
@@ -38,7 +37,6 @@ services:
 
   immich-ml:
     container_name: immich-ml
-    user: 1000:1000
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-cuda
     extends:
       file: hwaccel.ml.yaml
