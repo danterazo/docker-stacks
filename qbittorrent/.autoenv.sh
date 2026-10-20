@@ -1,18 +1,6 @@
-loc() (
-	set -o pipefail
-	local logs location
-
-	logs=$(docker logs gluetun 2>&1) || {
-		printf '%s\n' "$logs" >&2
-		return 1
-	}
-
-	location=$(printf '%s\n' "$logs" | grep -F 'Public IP address is' | tail -n 1)
-
-	if [[ -z "$location" ]]; then
-		printf '%s\n' 'no public ip/location entry found in gluetun logs' >&2
-		return 1
-	fi
-
-	printf '%s\n' "${location#*Public IP address is }"
-)
+vpn_location_script=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.common" && pwd)/vpn-location.sh
+printf -v vpn_location_alias 'loc=bash %q logs' "$vpn_location_script"
+alias "$vpn_location_alias"
+printf -v vpn_location_alias 'loc2=bash %q live' "$vpn_location_script"
+alias "$vpn_location_alias"
+unset vpn_location_script vpn_location_alias
