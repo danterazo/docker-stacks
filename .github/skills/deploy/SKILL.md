@@ -143,6 +143,11 @@ completion; do not rerun an uncertain update without explicit approval.
 - On a nonzero exit or explicit pull/build/up error, stop the rollout. Report
   the guest, command phase, exit status, and that later guests were skipped.
   Do not retry or roll back automatically.
+- Exception: a recreate failing with `tried to kill container, but did not
+  receive an exit event` can mean the old process is still flushing NFS
+  writeback (D state in `nfs_wb_all`). Wait for that process to exit, rerun
+  `dupull` on the same guest once, and `docker rename` any leftover
+  `<hash>_<name>` container back to its service name.
 - Missing output or an absent exit code means unknown, not failed or complete.
   Recover the original command result first; if unavailable, use one bounded
   read-only check to establish what is known. A matching Git SHA alone does
