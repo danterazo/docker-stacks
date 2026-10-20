@@ -244,10 +244,10 @@ existing snapshot unchanged rather than publishing a partial refresh.
   immutable identity. Recheck ownership and state live before guest work.
 - Find affected guests by matching the repo's stack directory name to guest
   hostnames, applying the user-confirmed exceptions below, then deduplicate
-  IDs. Nested paths under `gluetun`, including `gluetun/qbittorrent` and
-  `gluetun/soulseek`, target the gluetun guest (116). Include every matching
-  guest when hostnames are duplicated. Do not infer placement for unmatched
-  paths; ask or discover through approved read-only access.
+  IDs. Top-level `qbittorrent` targets LXC 116 and `soulseek` targets LXC 117;
+  each stack owns an inline Gluetun service. Include every matching guest when
+  hostnames are duplicated. Do not infer placement for unmatched paths; ask or
+  discover through approved read-only access.
 - Hostname matching is the user-provided deployment convention, not proof
   of a deployed checkout. Report renames and missing guests for review rather
   than silently changing the known placement rules. Docker-tagged or probed
@@ -311,6 +311,12 @@ existing snapshot unchanged rather than publishing a partial refresh.
   guest operations. If the validated file has no diff, no metadata commit is
   needed.
 
-Refresh after guest creation, deletion, migration, rename, or address changes,
-and before remote validation. Prefer on-demand checks; a weekly read-only
-drift report is optional and requires separate approval to schedule.
+After any authorized operation that could affect this map, repeat the full
+refresh after the operation completes and before handoff or remote validation.
+Triggers include guest creation/cloning, deletion, migration, renaming or ID
+changes, address changes, and pool/tag/node changes. Recheck live metadata after
+storage changes too, without adding disk identifiers to this metadata-only map.
+Update and validate both Central-time timestamp fields even if placements did
+not change. Keep an incomplete refresh in the pending ledger and do not claim
+the map is current. Prefer on-demand checks; a weekly read-only drift report is
+optional and requires separate approval to schedule.

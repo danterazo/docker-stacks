@@ -58,9 +58,10 @@
 - Read the root-level deployments.yaml before planning deployment or remote
   validation. Match stack directory names to guest hostnames, including
   parent directories for nested stacks, and apply the exceptions below.
-  Deduplicate IDs and include all guests with a matching hostname. Gluetun's
-  nested qbittorrent and soulseek paths also target guest 116. Ask or discover
-  unmatched paths rather than guessing placement.
+  Deduplicate IDs and include all guests with a matching hostname. The top-level
+  qbittorrent and soulseek stacks target guests 116 and 117 respectively; each
+  defines its own Gluetun service. Ask or discover unmatched paths rather than
+  guessing placement.
 - Treat stacks under .wip/ as undeployed. Do not include them in remote-access,
   deployment, or remote-validation targets unless a matching guest is explicitly
   listed in the root-level deployments.yaml; normal approval requirements still
@@ -221,10 +222,16 @@
 - Confirmed not-yet-deployed stacks are listed in undeployed_stacks; a guest
   with no matching repo directory is not proof of nondeployment.
   Ask or discover uncertain targets through approved read-only access.
-- Refresh observations after guest creation, deletion, migration, rename,
-  or address changes, and before remote work. Preserve intended deployment
-  mappings on refresh; show drift for review rather than silently replacing
-  mappings. Do not schedule background discovery without approval.
+- After any authorized operation that could change `deployments.yaml`, run
+  `/refresh-deployments` again after the operation completes and before handoff
+  or subsequent deployment. This includes guest creation/cloning, deletion,
+  migration, hostname/ID/address changes, and pool/tag/node changes. Revalidate
+  live state after storage changes too; keep disk names and runtime status out
+  of the metadata-only map. Update both Central-time timestamp fields, validate
+  the result, and keep metadata commits separate from application changes.
+  Preserve intended mappings and show drift for review rather than silently
+  replacing them. A failed refresh remains pending, not complete. Do not
+  schedule background discovery without approval.
 - Deployed checkout paths and revisions have not been verified. /docker
   comes from bootstrap.sh; confirm the actual checkout before using it.
 
