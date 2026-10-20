@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-20"
-  timestamp: "3:02:52 PM"
+  timestamp: "3:48:41 PM"
 
 cluster:
   entrypoint:
@@ -48,6 +48,13 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker]
+  105:
+    hostname: radeon-vm
+    node: kex
+    address: 192.168.30.105
+    pool: dev
+    type: qemu
+    tags: [gpu]
   108:
     hostname: plex-video
     node: kex
