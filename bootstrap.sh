@@ -18,6 +18,9 @@ declare -A HOST_APPS=(
 )
 
 : 'SYSTEM CONFIG'
+# enforce Central time on Docker VMs and LXCs
+sudo timedatectl set-timezone America/Chicago || exit 1
+
 # modify GRUB_CMDLINE_LINUX_DEFAULT
 GRUB_FILE="/etc/default/grub"
 CURRENT_GRUB=$(grep -oP '(?<=^GRUB_CMDLINE_LINUX_DEFAULT=")[^"]*' "$GRUB_FILE")
