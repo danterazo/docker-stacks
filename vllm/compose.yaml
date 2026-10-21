@@ -13,7 +13,7 @@ services:
     shm_size: 4gb
     ports:
       - 8000:8000/tcp
-    # TODO: Pass in available V620 GPUs
+    # Start with two V620s; set VLLM_TENSOR_PARALLEL_SIZE=4 after all four are attached and validated.
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
