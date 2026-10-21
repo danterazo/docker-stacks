@@ -17,12 +17,7 @@ services:
       - hive-disk-net
     volumes:
       - ./machine-config/machine-id:/etc/machine-id:ro
-      - type: volume
-        source: hivenet_nfs
-        target: /home/hive/.hive/
-        read_only: false
-        volume:
-          nocopy: true
+      - hivenet_nfs:/home/hive/.hive/:rw,nocopy
 
 networks:
   hive-disk-net:
