@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply 180W cap to detected Radeon Pro V620 cards
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/v620-powercap-apply.sh 180
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
