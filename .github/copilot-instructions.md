@@ -62,7 +62,7 @@
   qbittorrent and soulseek stacks target guests 116 and 117 respectively; each
   defines its own Gluetun service. Ask or discover unmatched paths rather than
   guessing placement.
-- Treat stacks under .wip/ as undeployed. Do not include them in remote-access,
+- Treat stacks under .undeployed/ as undeployed. Do not include them in remote-access,
   deployment, or remote-validation targets unless a matching guest is explicitly
   listed in the root-level deployments.yaml; normal approval requirements still
   apply.
