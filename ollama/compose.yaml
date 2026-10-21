@@ -11,12 +11,13 @@ services:
     env_file: .env
     ports:
       - 11434:11434/tcp
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
     volumes:
       - ./data/:/state/:rw
-      - /tank/models/ollama/:/models/:rw
+      - type: volume
+        source: models_nfs
+        target: /models
+        volume:
+          nocopy: true
     healthcheck:
       test: [CMD, ollama, list]
       interval: 30s
@@ -29,3 +30,11 @@ services:
 networks:
   ollama-net:
     name: ollama-net
+
+volumes:
+  models_nfs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.20.42,nfsvers=4.2,nconnect=8,rw,hard,noatime
+      device: :/tank/models/ollama
