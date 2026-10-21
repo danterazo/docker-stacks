@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-21"
-  timestamp: "1:22:44 PM"
+  timestamp: "1:50:08 PM"
 
 cluster:
   entrypoint:
@@ -68,7 +68,7 @@ docker_guests:
     address: 192.168.30.115
     pool: prod
     type: lxc
-    tags: [docker, monitoring]
+    tags: [dev, docker, monitoring]
   116:
     hostname: qbittorrent
     node: kex
