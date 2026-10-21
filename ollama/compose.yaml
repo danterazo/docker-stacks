@@ -13,11 +13,7 @@ services:
       - 11434:11434/tcp
     volumes:
       - ./data/:/state/:rw
-      - type: volume
-        source: models_nfs
-        target: /models
-        volume:
-          nocopy: true
+      - models_nfs:/models/:rw,nocopy
     healthcheck:
       test: [CMD, ollama, list]
       interval: 30s

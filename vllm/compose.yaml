@@ -18,7 +18,7 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - ./data/:/state/:rw
-      - /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}/:/model/:ro
+      - models_nfs:/model/:ro,nocopy
     command:
       - serve
       - /model
@@ -52,3 +52,11 @@ services:
 networks:
   vllm-net:
     name: vllm-net
+
+volumes:
+  models_nfs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.20.42,nfsvers=4.2,nconnect=8,ro,hard,noatime
+      device: :/tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a NAS Hugging Face checkpoint}
