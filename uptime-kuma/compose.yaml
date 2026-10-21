@@ -1,0 +1,16 @@
+services:
+  uptime-kuma:
+    container_name: uptime-kuma
+    image: louislam/uptime-kuma:latest
+    restart: unless-stopped
+    ports:
+      - 3001:3001/tcp
+    env_file: .env
+    volumes:
+      - ./data/:/app/data/:rw
+    networks:
+      - kuma-net
+
+networks:
+  kuma-net:
+    name: kuma-net
