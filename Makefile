@@ -43,6 +43,6 @@ deps:
 	poetry update
 	poetry install
 
-clean: fix-javascript
+clean:
 	find . -type f ! -path './.git/*' \
 		\( -name '*.sync-conflict-*' -o -name 'Zone.Identifier' -o -name '*:Zone.Identifier' \) -print -delete
