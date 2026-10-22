@@ -199,7 +199,7 @@ fi
 
 # host-specific sparse profiles
 read -r -a host_apps <<<"${HOST_APPS[${HOST_NAME}]:-${HOST_NAME}}"
-sparse_paths=('/.common/' '/bootstrap.sh' '/.gitignore') # common
+sparse_paths=('/+common/' '/bootstrap.sh' '/.gitignore') # +common
 for app in "${host_apps[@]}"; do
 	sparse_paths+=("/${app}/")
 done
@@ -224,15 +224,15 @@ sudo rm -f /etc/profile.d/00_lxc-details.sh || true
 # remove stale bash profile overrides
 sudo rm -f /root/.bash_profile /home/dante/.bash_profile || true
 
-# link login scripts into /etc/profile.d; executable helpers belong in .common/bin
+# link login scripts into /etc/profile.d; executable helpers belong in +common/bin
 for base in aliases.sh auto-cd.sh fastfetch.sh functions.sh; do
-	script="${HOME_DIR}/.common/${base}"
+	script="${HOME_DIR}/+common/${base}"
 	[ -e "$script" ] || continue
 	sudo ln -sf "$script" "/etc/profile.d/00-${base}"
 done
 
 # link the shared fastfetch config to both root and dante users
-FASTFETCH_CONFIG="${HOME_DIR}/.common/configs/fastfetch.jsonc"
+FASTFETCH_CONFIG="${HOME_DIR}/+common/configs/fastfetch.jsonc"
 if [ -f "${FASTFETCH_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/fastfetch"
@@ -244,7 +244,7 @@ else
 fi
 
 # link the shared direnv config to both root and dante users
-DIRENV_CONFIG="${HOME_DIR}/.common/configs/direnv.toml"
+DIRENV_CONFIG="${HOME_DIR}/+common/configs/direnv.toml"
 if [ -f "${DIRENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/direnv" || exit 1
@@ -255,7 +255,7 @@ else
 	exit 1
 fi
 
-AUTOENV_CONFIG="${HOME_DIR}/.common/configs/autoenv.sh"
+AUTOENV_CONFIG="${HOME_DIR}/+common/configs/autoenv.sh"
 if [ -f "${AUTOENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/autoenv" || exit 1
@@ -314,15 +314,15 @@ sudo visudo -c # validate sudoer file syntax
 
 : 'BASH CONFIG'
 # share one bashrc entrypoint across accounts
-if [ ! -f /docker/.common/bashrc.sh ]; then
-	echo "ERROR: /docker/.common/bashrc.sh not found. Sparse-checkout may have failed."
+if [ ! -f /docker/+common/bashrc.sh ]; then
+	echo "ERROR: /docker/+common/bashrc.sh not found. Sparse-checkout may have failed."
 	exit 1
 fi
 
 # create symlinks
 sudo mkdir -p /home/dante
-sudo ln -sf /docker/.common/bashrc.sh /root/.bashrc
-sudo ln -sf /docker/.common/bashrc.sh /home/dante/.bashrc
+sudo ln -sf /docker/+common/bashrc.sh /root/.bashrc
+sudo ln -sf /docker/+common/bashrc.sh /home/dante/.bashrc
 
 : 'REMINDERS FOR USER'
 echo -e "\nDouble-check IP in PVE UI before proceeding! \n\n"
