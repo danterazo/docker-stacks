@@ -30,6 +30,9 @@ hivenet/machine-config/machine-id
 *.sync-conflict-*
 .syncthing.*.tmp
 
+# ignore local editor settings
+/.vscode/
+
 # ignore trashes
 *.filen.trash.local/
 *.recycle/
