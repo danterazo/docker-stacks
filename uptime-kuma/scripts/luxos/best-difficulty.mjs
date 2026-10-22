@@ -116,14 +116,40 @@ async function request(url, options = {}) {
 	return response;
 }
 
+export function discordDestination(miner, environment = process.env) {
+	const value = environment[miner.discordWebhookEnv];
+	if (!value) {
+		throw new Error(`Missing Discord webhook for ${miner.name}`);
+	}
+	let url;
+	try {
+		url = new URL(value);
+	} catch {
+		throw new Error(`Invalid Discord webhook for ${miner.name}`);
+	}
+	if (url.protocol !== "https:" || url.hostname !== "discord.com" || !url.pathname.startsWith("/api/webhooks/") || url.username || url.password) {
+		throw new Error(`Invalid Discord webhook for ${miner.name}`);
+	}
+	return url;
+}
+
+export async function sendRecordNotification(miner, previous, best, details, { environment = process.env, send = request } = {}) {
+	const url = discordDestination(miner, environment);
+	url.searchParams.set("wait", "true");
+	await send(url, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			allowed_mentions: { parse: [] },
+			content: formatRecordMessage(miner, previous, best, details),
+		}),
+	});
+}
+
 export async function main() {
 	const config = JSON.parse(await readFile(new URL("./miners.json", import.meta.url), "utf8"));
-	const webhook = process.env.LUXOS_DISCORD_WEBHOOK;
-	const parsedWebhook = new URL(webhook);
-	if (parsedWebhook.protocol !== "https:" || parsedWebhook.hostname !== "discord.com" || !parsedWebhook.pathname.startsWith("/api/webhooks/")) {
-		throw new Error("A Discord HTTPS webhook is required");
-	}
 	for (const miner of config.miners) {
+		discordDestination(miner);
 		if (!process.env[miner.pushTokenEnv]) {
 			throw new Error(`Missing Push token for ${miner.name}`);
 		}
@@ -182,17 +208,7 @@ export async function main() {
 		return recordDetails(best, identity, pools, config.poolCoins, { BTC: btc, BCH: bch }, new Date().toISOString());
 	};
 	const notify = async (miner, previous, best, details) => {
-		const url = new URL(webhook);
-		url.searchParams.set("wait", "true");
-		await request(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				username: "LuxOS",
-				allowed_mentions: { parse: [] },
-				content: formatRecordMessage(miner, previous, best, details),
-			}),
-		});
+		await sendRecordNotification(miner, previous, best, details);
 		console.log(`${miner.name}: new record ${best} delivered`);
 	};
 	const push = async (miner, best, observed) => {

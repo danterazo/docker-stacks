@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkRecord, difficulty, formatDifficulty, formatRecordMessage, readBest, recordDetails } from "./best-difficulty.mjs";
+import {
+	checkRecord,
+	difficulty,
+	discordDestination,
+	formatDifficulty,
+	formatRecordMessage,
+	readBest,
+	recordDetails,
+	sendRecordNotification,
+} from "./best-difficulty.mjs";
 
 function fixture(initial = {}) {
 	const state = structuredClone(initial);
@@ -247,4 +256,49 @@ test("attributed record uses coin-first network label and per-coin lookup", () =
 	});
 	assert.match(content, /\(BTC Network: 1T\)/);
 	assert.doesNotMatch(content, /network: 1T BTC/);
+});
+
+test("each miner sends only to its own webhook and preserves Discord's configured identity", async () => {
+	const environment = {
+		LUXOS_DISCORD_WEBHOOK_A: "https://discord.com/api/webhooks/111/example-a",
+		LUXOS_DISCORD_WEBHOOK_B: "https://discord.com/api/webhooks/222/example-b",
+	};
+	const calls = [];
+	const send = async (url, options) => calls.push({ url: String(url), payload: JSON.parse(options.body) });
+	for (const suffix of ["A", "B"]) {
+		const miner = { name: `Miner ${suffix}`, url: "http://192.168.60.10:8080/api", discordWebhookEnv: `LUXOS_DISCORD_WEBHOOK_${suffix}` };
+		await sendRecordNotification(miner, "100", "200", {}, { environment, send });
+	}
+	assert.equal(new URL(calls[0].url).pathname, "/api/webhooks/111/example-a");
+	assert.equal(new URL(calls[1].url).pathname, "/api/webhooks/222/example-b");
+	for (const call of calls) {
+		assert.equal(new URL(call.url).searchParams.get("wait"), "true");
+		assert.equal(Object.hasOwn(call.payload, "username"), false);
+		assert.equal(Object.hasOwn(call.payload, "avatar_url"), false);
+		assert.deepEqual(call.payload.allowed_mentions, { parse: [] });
+	}
+});
+
+test("missing per-miner webhook cannot fall back to the old shared webhook", () => {
+	const miner = { name: "Miner B", discordWebhookEnv: "LUXOS_DISCORD_WEBHOOK_B" };
+	const environment = { LUXOS_DISCORD_WEBHOOK: "https://discord.com/api/webhooks/111/old-shared" };
+	assert.throws(() => discordDestination(miner, environment), /Missing Discord webhook for Miner B/);
+});
+
+test("invalid webhook errors do not disclose credentials or accept other destinations", () => {
+	const miner = { name: "Miner A", discordWebhookEnv: "LUXOS_DISCORD_WEBHOOK_A" };
+	for (const value of [
+		"secret-not-a-url",
+		"http://discord.com/api/webhooks/111/secret",
+		"https://discord.com.evil.example/api/webhooks/111/secret",
+		"https://user:secret@discord.com/api/webhooks/111/secret",
+	]) {
+		assert.throws(
+			() => discordDestination(miner, { LUXOS_DISCORD_WEBHOOK_A: value }),
+			(error) => {
+				assert.equal(error.message, "Invalid Discord webhook for Miner A");
+				return true;
+			},
+		);
+	}
 });

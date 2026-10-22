@@ -12,12 +12,16 @@
 		{
 			"name": "Antminer-S19K-Pro-Slim-A",
 			"displayName": "S19K Pro Slim A",
+			"notificationName": "S19K Slim A - BD",
+			"discordWebhookEnv": "LUXOS_DISCORD_WEBHOOK_A",
 			"url": "http://192.168.60.10:8080/api",
 			"pushTokenEnv": "KUMA_PUSH_TOKEN_A"
 		},
 		{
 			"name": "Antminer-S19K-Pro-Slim-B",
 			"displayName": "S19K Pro Slim B",
+			"notificationName": "S19K Slim B - BD",
+			"discordWebhookEnv": "LUXOS_DISCORD_WEBHOOK_B",
 			"url": "http://192.168.60.20:8080/api",
 			"pushTokenEnv": "KUMA_PUSH_TOKEN_B"
 		}
