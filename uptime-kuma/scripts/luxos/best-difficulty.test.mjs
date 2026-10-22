@@ -210,3 +210,19 @@ test("optional metadata failure does not prevent record delivery", async () => {
 	assert.equal(subject.notifications.length, 1);
 	assert.deepEqual(subject.notifications[0][3], {});
 });
+
+test("compact miner display names do not rename persistent record keys", async () => {
+	const miner = { name: "Antminer-S19K-Pro-Slim-A", displayName: "S19K Pro Slim A", url: "http://192.168.60.10:8080/api" };
+	const content = formatRecordMessage(miner, "100", "200");
+	assert.match(content, /Miner:    S19K Pro Slim A/);
+	const state = {};
+	await checkRecord({
+		miner,
+		state,
+		persist: async () => {},
+		summary: async () => ({ STATUS: [{ STATUS: "S" }], SUMMARY: [{ "Best Share": 200 }] }),
+		notify: async () => {},
+		push: async () => {},
+	});
+	assert.deepEqual(Object.keys(state), ["Antminer-S19K-Pro-Slim-A"]);
+});

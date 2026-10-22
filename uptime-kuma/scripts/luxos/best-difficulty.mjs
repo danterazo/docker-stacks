@@ -37,7 +37,7 @@ export function formatRecordMessage(miner, previous, best, details = {}) {
 	const coin = details.coin ?? "Unknown";
 	const network = formatDifficulty(details.networkDifficulty);
 	const fields = [
-		["Miner", miner.name],
+		["Miner", miner.displayName ?? miner.name],
 		["Hostname", details.hostname ?? miner.name],
 		["IP", new URL(miner.url).hostname],
 		["MAC", details.mac],

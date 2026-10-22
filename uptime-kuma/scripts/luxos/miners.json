@@ -11,11 +11,13 @@
 	"miners": [
 		{
 			"name": "Antminer-S19K-Pro-Slim-A",
+			"displayName": "S19K Pro Slim A",
 			"url": "http://192.168.60.10:8080/api",
 			"pushTokenEnv": "KUMA_PUSH_TOKEN_A"
 		},
 		{
 			"name": "Antminer-S19K-Pro-Slim-B",
+			"displayName": "S19K Pro Slim B",
 			"url": "http://192.168.60.20:8080/api",
 			"pushTokenEnv": "KUMA_PUSH_TOKEN_B"
 		}
