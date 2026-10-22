@@ -1,5 +1,13 @@
 {
 	"kumaUrl": "http://uptime-kuma:3001",
+	"poolCoins": {
+		"btc.samskeyti.net": "BTC",
+		"bch.samskeyti.net": "BCH"
+	},
+	"networkSources": {
+		"BTC": "https://api.blockchair.com/bitcoin/stats",
+		"BCH": "https://api.blockchair.com/bitcoin-cash/stats"
+	},
 	"miners": [
 		{
 			"name": "Antminer-S19K-Pro-Slim-A",

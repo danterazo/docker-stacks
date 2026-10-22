@@ -19,7 +19,66 @@ export function readBest(summary) {
 	return difficulty(summary.SUMMARY?.[0]?.['Best Share']);
 }
 
-export async function checkRecord({ miner, state, persist, summary, notify, push }) {
+export function formatDifficulty(value) {
+	const numeric = Number(value);
+	if (value === null || value === undefined || value === '' || !Number.isFinite(numeric) || numeric < 0) {
+		return 'Unavailable';
+	}
+	const units = ['', 'K', 'M', 'G', 'T', 'P', 'E'];
+	const index = numeric === 0 ? 0 : Math.min(Math.floor(Math.log10(numeric) / 3), units.length - 1);
+	return `${(numeric / (1000 ** Math.max(index, 0))).toFixed(2).replace(/\.?0+$/, '')}${units[Math.max(index, 0)]}`;
+}
+
+export function formatRecordMessage(miner, previous, best, details = {}) {
+	const clean = (value) => String(value ?? 'Unavailable').replace(/[`\r\n]/g, ' ').slice(0, 160);
+	const coin = details.coin ?? 'Unknown';
+	const network = formatDifficulty(details.networkDifficulty);
+	const fields = [
+		['Miner', miner.name],
+		['Hostname', details.hostname ?? miner.name],
+		['IP', new URL(miner.url).hostname],
+		['MAC', details.mac],
+		['Coin', coin],
+		['Pool', details.poolHost],
+		['Previous', formatDifficulty(previous)],
+	];
+	if (!details.coin) {
+		fields.push(['BTC net', formatDifficulty(details.networks?.BTC?.difficulty)]);
+		fields.push(['BCH net', formatDifficulty(details.networks?.BCH?.difficulty)]);
+	}
+	fields.push(['As of', details.networkTime]);
+	const width = Math.max(...fields.map(([label]) => label.length)) + 2;
+	const block = fields.map(([label, value]) => `${`${label}:`.padEnd(width)}${clean(value)}`).join('\n');
+	return `\u{1F4C8} New best difficulty found!\nDiff: **${formatDifficulty(best)}** (network: ${network}${details.coin ? ` ${clean(coin)}` : ''})\n\`\`\`text\n${block}\n\`\`\``;
+}
+
+export function recordDetails(best, configResponse, poolsResponse, poolCoins, networks, networkTime) {
+	const identity = configResponse?.STATUS?.[0]?.STATUS === 'S' ? configResponse.CONFIG?.[0] : undefined;
+	const pools = poolsResponse?.STATUS?.[0]?.STATUS === 'S' ? poolsResponse.POOLS ?? [] : [];
+	const matching = [];
+	for (const pool of pools) {
+		try {
+			if (difficulty(pool['Best Share']) === difficulty(best)) {
+				const hostname = new URL(pool.URL).hostname;
+				matching.push({ hostname, coin: poolCoins[hostname] });
+			}
+		} catch {}
+	}
+	const coins = new Set(matching.map(pool => pool.coin));
+	const candidate = coins.size === 1 ? matching[0]?.coin : undefined;
+	const coin = ['BTC', 'BCH'].includes(candidate) ? candidate : undefined;
+	return {
+		hostname: identity?.Hostname,
+		mac: /^[\da-f]{2}(?::[\da-f]{2}){5}$/i.test(identity?.MACAddr ?? '') ? identity.MACAddr : undefined,
+		coin,
+		poolHost: matching.length ? [...new Set(matching.map(pool => pool.hostname))].join(', ') : undefined,
+		networkDifficulty: coin ? networks[coin]?.difficulty : undefined,
+		networks,
+		networkTime,
+	};
+}
+
+export async function checkRecord({ miner, state, persist, summary, notify, push, describe = async () => ({}) }) {
 	const observed = readBest(await summary(miner));
 	if (!state[miner.name]) {
 		const baseline = { highest: String(observed), notified: String(observed) };
@@ -28,12 +87,16 @@ export async function checkRecord({ miner, state, persist, summary, notify, push
 	}
 	let record = state[miner.name];
 	if (observed > difficulty(record.highest)) {
-		record = { ...record, highest: String(observed) };
+		let details = {};
+		try {
+			details = await describe(miner, String(observed));
+		} catch {}
+		record = { ...record, highest: String(observed), details };
 		await persist({ ...state, [miner.name]: record });
 		state[miner.name] = record;
 	}
 	if (difficulty(record.highest) > difficulty(record.notified)) {
-		await notify(miner, record.notified, record.highest);
+		await notify(miner, record.notified, record.highest, record.details ?? {});
 		record = { ...record, notified: record.highest };
 		await persist({ ...state, [miner.name]: record });
 		state[miner.name] = record;
@@ -80,15 +143,41 @@ export async function main() {
 		await writeFile(`${statePath}.tmp`, `${JSON.stringify(records, null, '\t')}\n`, { mode: 0o600 });
 		await rename(`${statePath}.tmp`, statePath);
 	};
-	const summary = async (miner) => {
+	const api = async (miner, command) => {
 		const response = await request(miner.url, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ command: 'summary' }),
+			body: JSON.stringify({ command }),
 		});
 		return response.json();
 	};
-	const notify = async (miner, previous, best) => {
+	const summary = (miner) => api(miner, 'summary');
+	const describe = async (miner, best) => {
+		const optional = async (operation) => {
+			try {
+				return await operation();
+			} catch {
+				return undefined;
+			}
+		};
+		const network = (source) => optional(async () => {
+			const response = await request(source);
+			const result = await response.json();
+			const value = result.data?.difficulty;
+			if (result.context?.code !== 200 || typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+				throw new Error('Network difficulty unavailable');
+			}
+			return { difficulty: value, source };
+		});
+		const [identity, pools, btc, bch] = await Promise.all([
+			optional(() => api(miner, 'config')),
+			optional(() => api(miner, 'pools')),
+			network(config.networkSources.BTC),
+			network(config.networkSources.BCH),
+		]);
+		return recordDetails(best, identity, pools, config.poolCoins, { BTC: btc, BCH: bch }, new Date().toISOString());
+	};
+	const notify = async (miner, previous, best, details) => {
 		const url = new URL(webhook);
 		url.searchParams.set('wait', 'true');
 		await request(url, {
@@ -97,7 +186,7 @@ export async function main() {
 			body: JSON.stringify({
 				username: 'LuxOS',
 				allowed_mentions: { parse: [] },
-				content: `New all-time best difficulty\n**${miner.name}**\nPrevious: ${previous}\nNew best: **${best}**`,
+				content: formatRecordMessage(miner, previous, best, details),
 			}),
 		});
 		console.log(`${miner.name}: new record ${best} delivered`);
@@ -115,7 +204,7 @@ export async function main() {
 	while (true) {
 		for (const miner of config.miners) {
 			try {
-				await checkRecord({ miner, state, persist, summary, notify, push });
+				await checkRecord({ miner, state, persist, summary, notify, push, describe });
 			} catch {
 				console.error(`${miner.name}: check or delivery failed; will retry without resetting records`);
 			}
