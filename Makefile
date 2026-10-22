@@ -40,4 +40,5 @@ deps:
 	poetry install
 
 clean:
-	find . -type f \( -name 'Zone.Identifier' -o -name '*:Zone.Identifier' \) -print -delete
+	find . -type f ! -path './.git/*' \
+		\( -name '*.sync-conflict-*' -o -name 'Zone.Identifier' -o -name '*:Zone.Identifier' \) -print -delete
