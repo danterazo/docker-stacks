@@ -12,6 +12,32 @@ services:
     networks:
       - kuma-net
 
+  luxos-records:
+    container_name: luxos-records
+    image: louislam/uptime-kuma:2
+    user: 1000:1000
+    restart: unless-stopped
+    entrypoint: [node, /opt/luxos/best-difficulty.mjs]
+    command: []
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      disable: true
+    depends_on:
+      uptime-kuma:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./best-difficulty.mjs:/opt/luxos/best-difficulty.mjs:ro
+      - ./miners.json:/opt/luxos/miners.json:ro
+      - ./best-difficulty-data/:/records/:rw
+    networks:
+      - kuma-net
+
 networks:
   kuma-net:
     name: kuma-net

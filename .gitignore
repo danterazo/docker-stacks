@@ -54,6 +54,7 @@ immich/redis-data/
 
 # ignore state (semi-ephemeral) files
 adguardhome/state/
+uptime-kuma/best-difficulty-data/
 
 # ignore caches
 *__pycache__/
