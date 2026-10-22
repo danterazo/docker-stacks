@@ -35,7 +35,7 @@ export function formatRecordMessage(miner, previous, best, details = {}) {
 			.replace(/[`\r\n]/g, " ")
 			.slice(0, 160);
 	const coin = details.coin ?? "Unknown";
-	const network = formatDifficulty(details.networkDifficulty);
+	const network = formatDifficulty(details.networkDifficulty ?? details.networks?.[details.coin]?.difficulty);
 	const fields = [
 		["Miner", miner.displayName ?? miner.name],
 		["Hostname", details.hostname ?? miner.name],
@@ -46,13 +46,14 @@ export function formatRecordMessage(miner, previous, best, details = {}) {
 		["Previous", formatDifficulty(previous)],
 	];
 	if (!details.coin) {
-		fields.push(["BTC net", formatDifficulty(details.networks?.BTC?.difficulty)]);
-		fields.push(["BCH net", formatDifficulty(details.networks?.BCH?.difficulty)]);
+		fields.push(["BTC Network", formatDifficulty(details.networks?.BTC?.difficulty)]);
+		fields.push(["BCH Network", formatDifficulty(details.networks?.BCH?.difficulty)]);
 	}
 	fields.push(["As of", details.networkTime]);
 	const width = Math.max(...fields.map(([label]) => label.length)) + 2;
 	const block = fields.map(([label, value]) => `${`${label}:`.padEnd(width)}${clean(value)}`).join("\n");
-	return `\u{1F4C8} New best difficulty found!\nDiff: **${formatDifficulty(best)}** (network: ${network}${details.coin ? ` ${clean(coin)}` : ""})\n\`\`\`text\n${block}\n\`\`\``;
+	const networkLabel = details.coin ? ` (${clean(coin)} Network: ${network})` : "";
+	return `\u{1F4C8} New best difficulty found!\nDiff: **${formatDifficulty(best)}**${networkLabel}\n\`\`\`text\n${block}\n\`\`\``;
 }
 
 export function recordDetails(best, configResponse, poolsResponse, poolCoins, networks, networkTime) {

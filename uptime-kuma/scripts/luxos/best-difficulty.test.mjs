@@ -137,7 +137,7 @@ test("record messages match the reference layout with aligned identity fields", 
 		networkDifficulty: 526000000000,
 	});
 	assert.match(content, /New best difficulty found!/);
-	assert.match(content, /Diff: \*\*6\.23G\*\* \(network: 526G BCH\)/);
+	assert.match(content, /Diff: \*\*6\.23G\*\* \(BCH Network: 526G\)/);
 	assert.ok(content.includes("Hostname: Antminer-S19K-Pro-Slim-A\nIP:       192.168.60.10\nMAC:      00:11:22:33:44:55\nCoin:     BCH\n"));
 	assert.ok(content.includes("Previous: 1M"));
 });
@@ -145,11 +145,11 @@ test("record messages match the reference layout with aligned identity fields", 
 test("unknown coin and network are not guessed and metadata cannot break the code block", () => {
 	const miner = { name: "Miner", url: "http://192.168.60.20:8080/api" };
 	const content = formatRecordMessage(miner, "100", "200", { hostname: "bad```\nhost" });
-	assert.match(content, /network: Unavailable/);
-	assert.match(content, /Coin:     Unknown/);
-	assert.doesNotMatch(content, /Coin:     (BTC|BCH)/);
-	assert.match(content, /BTC net:  Unavailable/);
-	assert.match(content, /BCH net:  Unavailable/);
+	assert.doesNotMatch(content, /\(network: Unavailable\)/);
+	assert.match(content, /Coin:\s+Unknown/);
+	assert.doesNotMatch(content, /Coin:\s+(BTC|BCH)/);
+	assert.match(content, /BTC Network:\s+Unavailable/);
+	assert.match(content, /BCH Network:\s+Unavailable/);
 	assert.equal(content.match(/```/g).length, 2);
 });
 
@@ -214,7 +214,7 @@ test("optional metadata failure does not prevent record delivery", async () => {
 test("compact miner display names do not rename persistent record keys", async () => {
 	const miner = { name: "Antminer-S19K-Pro-Slim-A", displayName: "S19K Pro Slim A", url: "http://192.168.60.10:8080/api" };
 	const content = formatRecordMessage(miner, "100", "200");
-	assert.match(content, /Miner:    S19K Pro Slim A/);
+	assert.match(content, /Miner:\s+S19K Pro Slim A/);
 	const state = {};
 	await checkRecord({
 		miner,
@@ -225,4 +225,26 @@ test("compact miner display names do not rename persistent record keys", async (
 		push: async () => {},
 	});
 	assert.deepEqual(Object.keys(state), ["Antminer-S19K-Pro-Slim-A"]);
+});
+
+test("known network difficulties remain visible when the record coin is unknown", () => {
+	const miner = { name: "Miner", url: "http://192.168.60.10:8080/api" };
+	const content = formatRecordMessage(miner, "100", "200", {
+		networks: { BTC: { difficulty: 1000000000000 }, BCH: { difficulty: 500000000000 } },
+	});
+	assert.match(content, /BTC Network:\s+1T/);
+	assert.match(content, /BCH Network:\s+500G/);
+	assert.match(content, /Coin:\s+Unknown/);
+	assert.doesNotMatch(content, /Network:[^\n]*Unavailable/);
+	assert.doesNotMatch(content, /\(network:/);
+});
+
+test("attributed record uses coin-first network label and per-coin lookup", () => {
+	const miner = { name: "Miner", url: "http://192.168.60.10:8080/api" };
+	const content = formatRecordMessage(miner, "100", "200", {
+		coin: "BTC",
+		networks: { BTC: { difficulty: 1000000000000 } },
+	});
+	assert.match(content, /\(BTC Network: 1T\)/);
+	assert.doesNotMatch(content, /network: 1T BTC/);
 });
