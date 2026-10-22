@@ -32,8 +32,8 @@ services:
       - .env
       - .secrets
     volumes:
-      - ./best-difficulty.mjs:/opt/luxos/best-difficulty.mjs:ro
-      - ./miners.json:/opt/luxos/miners.json:ro
+      - ./scripts/luxos/best-difficulty.mjs:/opt/luxos/best-difficulty.mjs:ro
+      - ./scripts/luxos/miners.json:/opt/luxos/miners.json:ro
       - ./best-difficulty-data/:/records/:rw
     networks:
       - kuma-net
