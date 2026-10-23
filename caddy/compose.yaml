@@ -26,11 +26,6 @@ services:
     container_name: tailscale
     restart: unless-stopped
     network_mode: host
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    devices:
-      - /dev/net/tun:/dev/net/tun
     env_file:
       - .env
       - tailscale.env
