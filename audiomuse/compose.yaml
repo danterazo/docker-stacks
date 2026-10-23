@@ -19,7 +19,7 @@ services:
 
   # AudioMuse-AI Flask application service
   flask:
-    image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
+    image: ghcr.io/neptunehub/audiomuse-ai:latest-nvidia
     container_name: audiomuse-flask
     environment:
       SERVICE_TYPE: flask
@@ -48,7 +48,7 @@ services:
 
   # AudioMuse-AI Queue Worker service
   audiomuse-worker:
-    image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
+    image: ghcr.io/neptunehub/audiomuse-ai:latest-nvidia
     container_name: audiomuse-worker
     environment:
       SERVICE_TYPE: worker
