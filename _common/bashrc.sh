@@ -117,6 +117,10 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
+if [[ -r /docker/_common/utility-aliases.sh ]]; then
+	source /docker/_common/utility-aliases.sh
+fi
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
