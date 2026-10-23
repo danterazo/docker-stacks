@@ -1,8 +1,11 @@
 #!/bin/sh
-if (return 0 2>/dev/null); then
+case "$0" in
+*/tailscale-service-healthcheck.sh | tailscale-service-healthcheck.sh) ;;
+*)
 	printf 'Run this healthcheck with sh; do not source it\n' >&2
 	return 1
-fi
+	;;
+esac
 set -eu
 
 service=${TS_SERVICE_NAME:?A Service name is required}

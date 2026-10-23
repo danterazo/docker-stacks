@@ -1,8 +1,11 @@
 #!/bin/sh
-if (return 0 2>/dev/null); then
+case "$0" in
+*/check-dns.sh | check-dns.sh | */check-service.sh | check-service.sh) ;;
+*)
 	printf 'Run this healthcheck with sh; do not source it\n' >&2
 	return 1
-fi
+	;;
+esac
 set -eu
 
 address=${1:?A local DNS address is required}

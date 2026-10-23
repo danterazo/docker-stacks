@@ -1,8 +1,11 @@
 #!/bin/sh
-if (return 0 2>/dev/null); then
+case "$0" in
+*/entrypoint.sh | entrypoint.sh) ;;
+*)
 	printf 'Run this entrypoint with sh; do not source it\n' >&2
 	return 1
-fi
+	;;
+esac
 set -eu
 
 ipv4=${TS_SERVICE_IPV4:?An IPv4 Service address is required}

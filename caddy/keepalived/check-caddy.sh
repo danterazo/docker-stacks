@@ -1,8 +1,11 @@
 #!/bin/sh
-if (return 0 2>/dev/null); then
+case "$0" in
+*/check-caddy.sh | check-caddy.sh | */check-service.sh | check-service.sh) ;;
+*)
 	printf 'Run this healthcheck with sh; do not source it\n' >&2
 	return 1
-fi
+	;;
+esac
 set -eu
 
 nc -z -w 1 127.0.0.1 80
