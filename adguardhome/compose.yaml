@@ -15,6 +15,7 @@ services:
     container_name: tailscale
     restart: unless-stopped
     network_mode: host
+    entrypoint: [/bin/sh, /etc/tailscale/entrypoint.sh]
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -29,10 +30,14 @@ services:
         target: /var/lib/tailscale/
         bind:
           create_host_path: false
+      - ./tailscale/entrypoint.sh:/etc/tailscale/entrypoint.sh:ro
+      - ./tailscale/serve.json:/etc/tailscale/serve.json:ro
+      - ./keepalived/check-dns.sh:/etc/tailscale/check-service.sh:ro
+      - ../+common/bin/tailscale-service-healthcheck.sh:/usr/local/bin/tailscale-service-healthcheck.sh:ro
     healthcheck:
-      test: [CMD, wget, -q, --spider, http://127.0.0.1:9002/healthz]
-      interval: 30s
-      timeout: 5s
+      test: [CMD, /bin/sh, /usr/local/bin/tailscale-service-healthcheck.sh]
+      interval: 10s
+      timeout: 15s
       retries: 3
       start_period: 10m
 
