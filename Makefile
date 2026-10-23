@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './node_modules' -o -path './.vscode' -o -path './.undeployed' -o -path './tabby/source' \) -prune -o
 
-.PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker fix-caddy deps clean
+.PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker lint-docker-inner fix-caddy fix-caddy-inner deps clean
 
 # format everything
 format: fix-python fix-shell fix-javascript fix-caddy lint-compose-spacing lint-docker
@@ -20,10 +20,16 @@ lint-compose-spacing:
 	python scripts/lint-compose-spacing.py
 
 lint-docker:
+	newgrp docker -c '$(MAKE) --no-print-directory lint-docker-inner'
+
+lint-docker-inner:
 	find . \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './node_modules' -o -path './.vscode' -o -path './tabby/source' -o -path './.undeployed/tabby/source' \) -prune -o -type f \( -name 'Dockerfile' -o -name 'Dockerfile.*' \) -print0 \
 		| xargs -0 -I {} sh -c 'docker buildx build --check --file "$$1" "$$(dirname "$$1")"' _ {}
 
 fix-caddy:
+	newgrp docker -c '$(MAKE) --no-print-directory fix-caddy-inner'
+
+fix-caddy-inner:
 	find caddy/configs -type f \( -name 'Caddyfile*' -o -name '*.conf' \) -printf '%P\0' \
 		| xargs -0 -r -I {} docker run --rm \
 			--user "$$(id -u):$$(id -g)" \
