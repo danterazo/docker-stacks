@@ -141,10 +141,6 @@ filters:
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_50.txt
     name: uBlock₀ filters – Badware risks
     id: 1736737555
-  - enabled: false
-    url: https://raw.githubusercontent.com/ph00lt0/blocklist/master/blocklist.txt
-    name: Ph00lt0 Blocklist
-    id: 1736737556
   - enabled: true
     url: https://raw.githubusercontent.com/insomnimus/seo-garbage/refs/heads/main/lists/ddg-and-google.txt
     name: Insomnia's Garbage Sites Filter
@@ -184,7 +180,9 @@ user_rules:
   - '@@||nyaa.si^$important'
   - '# allow Monero mining'
   - '@@||gulf.moneroocean.stream^$important'
-  - ""
+  - '! direct Caddy service for Tailnet clients; retain the LAN virtual IP otherwise'
+  - /\.samskeyti\.net$/$dnsrewrite=NOERROR;A;100.100.40.203,client=100.64.0.0/10|fd7a:115c:a1e0::/48
+  - /\.samskeyti\.net$/$dnsrewrite=NOERROR;A;192.168.40.203,client=~100.64.0.0/10|~fd7a:115c:a1e0::/48
 dhcp:
   enabled: false
   interface_name: eth0
@@ -225,9 +223,6 @@ filtering:
   rewrites:
     - domain: plex.direct
       answer: 192.168.10.1
-      enabled: true
-    - domain: '*.samskeyti.net'
-      answer: 192.168.40.203
       enabled: true
     - domain: plex.samskeyti.net
       answer: app.plex.tv
