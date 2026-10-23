@@ -235,8 +235,16 @@ if [ "${REPO_CREATED}" = "0" ] && [ "$(dante_git -C "${HOME_DIR}" config --get c
 		done <"${existing_patterns}"
 	fi
 fi
-sparse_paths+=('!/_common/radeon/')
-dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${sparse_paths[@]}" || exit 1
+declare -A seen_sparse_paths=()
+unique_sparse_paths=()
+for sparse_path in "${sparse_paths[@]}"; do
+	[ -n "${sparse_path}" ] && [ "${sparse_path}" != '!/_common/radeon/' ] || continue
+	[ -z "${seen_sparse_paths[${sparse_path}]+set}" ] || continue
+	seen_sparse_paths["${sparse_path}"]=1
+	unique_sparse_paths+=("${sparse_path}")
+done
+unique_sparse_paths+=('!/_common/radeon/')
+dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${unique_sparse_paths[@]}" || exit 1
 
 # move to app dir if the host contains only a single stack
 if [ -d "${HOME_DIR}/${HOST_NAME}" ]; then
