@@ -10,6 +10,7 @@ services:
       - 80:80/tcp # HTTP
       - 443:443/tcp # HTTPS
       - 443:443/udp # HTTP/3
+      - 8080:8080/tcp
     env_file:
       - .env
       - .secrets
