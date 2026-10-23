@@ -13,6 +13,8 @@ services:
   keepalived:
     image: osixia/keepalived:latest
     container_name: keepalived
+    profiles:
+      - failover
     restart: always
     network_mode: host
     cap_add:
@@ -22,6 +24,9 @@ services:
     env_file:
       - common.env
       - keepalived.env
+    volumes:
+      - ./keepalived/keepalived.conf.template:/etc/keepalived/keepalived.conf.template:ro
+      - ./keepalived/check-dns.sh:/etc/keepalived/check-dns.sh:ro
 
   # only runs in one LXC
   adguardhome-sync:
