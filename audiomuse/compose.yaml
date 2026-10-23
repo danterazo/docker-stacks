@@ -6,29 +6,31 @@ services:
     env_file:
       - .env
       - .secrets
-    ports:
-      - 5432:5432/tcp
     volumes:
-      - ./db/:/var/lib/postgresql/data
+      - ./data/postgres/:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - audiomuse-net
 
   # AudioMuse-AI Flask application service
   flask:
-    image: ghcr.io/neptunehub/audiomuse-ai:pr-846-nvidia
+    image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
     container_name: audiomuse-flask
     ports:
       - 8000:8000/tcp
     env_file:
       - .env
       - .secrets
-    environment:
-      SERVICE_TYPE: worker
     volumes:
-      - ./flask-plugins/:/app/plugin/installed/:rw
+      - ./data/flask-plugins/:/app/plugin/installed/:rw
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - audiomuse-net
@@ -44,15 +46,17 @@ services:
 
   # AudioMuse-AI Queue Worker service
   audiomuse-worker:
-    image: ghcr.io/neptunehub/audiomuse-ai:pr-846-nvidia
+    image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
     container_name: audiomuse-worker
     env_file:
       - .env
       - .secrets
+      - worker.env
     volumes:
-      - ./worker-plugins/:/app/plugin/installed/:rw
+      - ./data/worker-plugins/:/app/plugin/installed/:rw
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - audiomuse-net
