@@ -101,10 +101,12 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   exact targets, rollout order, guest-wide impact, and any unresolved
   decision. Do not ask separately for SSH, each guest, or each deployment
   phase. Once approved, continue without repeated confirmation.
-- Do not commit, push, transfer files, change sparse-checkout rules, install
+- Do not commit, push, transfer files, install
   tooling, start stopped guests, reboot, or change networking as implicit
   deployment prerequisites. Required bootstrap has the standing authorization
-  below; ask for every other needed scope expansion.
+  below. An authorized new-stack deployment includes the narrowly scoped sparse
+  checkout addition described in preflight; other sparse changes and scope
+  expansions require approval.
 - Execute deployment mutations sequentially. Stop rollout on failure and
   report completed, failed, and skipped targets; do not silently roll back
   or retry mutations.
@@ -351,6 +353,14 @@ caddyserver.com while the guest's Caddy is stopped.
    plain
    `git pull`, so confirm after `git fetch` that it would fast-forward.
    Record the predeploy SHA.
+   For a new stack directory, also inspect `core.sparseCheckout`,
+   `core.sparseCheckoutCone`, `git sparse-checkout list`, and the patterns under
+   the actual Git directory. Use bootstrap.sh's host profile as reference and
+   update it when needed. Add only the required stack path in the existing cone
+   or non-cone mode, preserving existing paths, exclusions, and local work;
+   verify the new Compose files exist before deployment commands. Do not run
+   full bootstrap solely for sparse checkout. Extra services in an existing
+   included stack do not require this step.
 5. Review the deployed `dcd` alias and `dpull` definition before running
    them; they may differ from this checkout. If they no longer match the
    behavior described here, stop and report. Confirm the expected top-level

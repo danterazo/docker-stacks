@@ -195,6 +195,14 @@
   evaluation profile implicitly or treat absent GPU passthrough as ready.
 - Shared code such as bootstrap.sh and +common/ may affect multiple
   mapped deployments. Establish the affected targets before validation.
+- When deploying a new stack directory to an LXC or VM, first inspect its
+  current sparse-checkout mode, patterns, and included paths as dante in
+  `/docker`. Use bootstrap.sh's host profile as the placement reference, update
+  that profile when needed, and add the new stack while preserving existing
+  paths and exclusions. Respect cone versus non-cone mode; verify the stack's
+  files are present before Compose commands. Do not run the full bootstrap
+  solely to change sparse checkout. Adding services to an existing included
+  stack does not require this new-stack step.
 - Required bootstrap during an approved deployment has standing user approval,
   including its OS/package, permission/group/sudo, and SSH key/trust changes
   and the required guest administrative shell. Report which guests require

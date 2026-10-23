@@ -82,6 +82,22 @@ ancestor of `FETCH_HEAD`, then merges with `--ff-only`. It stops on local-ahead
 or divergent history and never creates guest-local merge commits. Keep this
 guard even though deployment preflight performs the same ancestry check.
 
+### New Stack Sparse Checkout
+
+When adding a new stack directory to an LXC or VM, inspect
+`git config --get core.sparseCheckout`,
+`git config --get core.sparseCheckoutCone`, `git sparse-checkout list`, and
+the sparse-checkout patterns under the actual Git directory as dante in
+`/docker`. Compare the selected stack with bootstrap.sh's host profile and
+update that source profile when needed. After fetching the published revision,
+add the required stack path in the guest's existing cone or non-cone mode,
+preserving all existing stack paths and exclusions, then fast-forward and
+verify the new Compose files exist before deployment commands. Review guest
+changes and collisions first; never overwrite local work or replace the entire
+profile with a guessed list. Do not run full bootstrap solely to change sparse
+checkout. This step is for new stack directories, not extra services added to
+an existing included stack, and it does not expand deployment scope.
+
 ## Networking Order
 
 AdGuard Home and Caddy remain staggered even in lite mode:
