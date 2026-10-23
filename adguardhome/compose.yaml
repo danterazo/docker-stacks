@@ -10,6 +10,30 @@ services:
       - ./configs/:/opt/adguardhome/conf/:rw
     network_mode: host
 
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file: common.env
+    volumes:
+      - type: bind
+        source: /var/lib/tailscale/
+        target: /var/lib/tailscale/
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:9002/healthz]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10m
+
   keepalived:
     image: osixia/keepalived:latest
     container_name: keepalived

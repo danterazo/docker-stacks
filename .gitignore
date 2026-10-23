@@ -73,4 +73,5 @@ uptime-kuma/best-difficulty-data/
 adguardhome/.env
 adguardhome/keepalived.env
 caddy/keepalived.env
+caddy/tailscale.env
 
