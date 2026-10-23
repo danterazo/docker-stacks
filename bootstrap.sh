@@ -13,7 +13,7 @@ sudo do-release-upgrade -f DistUpgradeViewNonInteractive
 
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
-	["nvidia-vm"]='immich plex-video'
+	["nvidia-vm"]='immich plex-video audiomuse'
 )
 
 : 'SYSTEM CONFIG'
