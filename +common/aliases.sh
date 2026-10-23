@@ -21,4 +21,4 @@ alias dcpb="docker compose build --pull"
 alias upgrade='sudo apt-get update && sudo apt-get dist-upgrade -y && sudo apt-get clean && sudo apt-get autoremove -y --purge'
 
 # system state
-alias bootstrap='cd /docker && { if [[ ${EUID} -eq 0 ]]; then runuser -u dante -- git pull; else git pull; fi; } && source /docker/bootstrap.sh'
+alias bootstrap='cd /docker && { if [[ ${EUID} -eq 0 ]]; then runuser -u dante -- git pull --ff-only; else git pull --ff-only; fi; } && bash -O extglob /docker/bootstrap.sh'

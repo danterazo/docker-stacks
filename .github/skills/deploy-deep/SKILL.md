@@ -226,7 +226,9 @@ Do not expand the selected guest scope.
    Set `HOME=/root` in that administrative shell before sourcing or invoking
    the alias. `pct exec` may otherwise provide `/` as `HOME`, causing the
    script's `$HOME/.autoenv` setup to create `/.autoenv`.
-   Do not substitute `bash bootstrap.sh`: the alias sources the script.
+   The alias pulls Git with `--ff-only`, then runs
+   `bash -O extglob /docker/bootstrap.sh` in a child shell. Never source
+   `bootstrap.sh`; its source guard intentionally rejects that invocation.
 4. Check output from every bootstrap phase, not only its final status;
    neither the alias nor script guarantees all earlier failures propagate.
    Stop on failure before teardown. Open a fresh `dante` session afterward,
