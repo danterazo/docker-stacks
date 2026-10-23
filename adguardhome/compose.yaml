@@ -20,7 +20,9 @@ services:
       - NET_RAW
     devices:
       - /dev/net/tun:/dev/net/tun
-    env_file: common.env
+    env_file:
+      - common.env
+      - tailscale.env
     volumes:
       - type: bind
         source: /var/lib/tailscale/

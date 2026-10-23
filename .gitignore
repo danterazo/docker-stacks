@@ -72,6 +72,7 @@ uptime-kuma/best-difficulty-data/
 # ignore unique files
 adguardhome/.env
 adguardhome/keepalived.env
+adguardhome/tailscale.env
 caddy/keepalived.env
 caddy/tailscale.env
 
