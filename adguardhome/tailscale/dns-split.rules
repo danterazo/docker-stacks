@@ -1,0 +1,3 @@
+! direct caddy service for tailnet clients; retain the lan virtual ip otherwise
+/\.samskeyti\.net$/$dnsrewrite=NOERROR;A;100.76.48.151,client=100.64.0.0/10|fd7a:115c:a1e0::/48
+/\.samskeyti\.net$/$dnsrewrite=NOERROR;A;192.168.40.203,client=~100.64.0.0/10|~fd7a:115c:a1e0::/48
