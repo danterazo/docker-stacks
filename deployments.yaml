@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-10-22"
-  timestamp: "12:10:37 PM"
+  date: "2026-10-23"
+  timestamp: "3:13:35 AM"
 
 cluster:
   entrypoint:
@@ -52,7 +52,7 @@ docker_guests:
     hostname: radeon-vm
     node: kex
     address: 192.168.30.105
-    pool: dev
+    pool: prod
     type: qemu
     tags: [gpu]
   108:
