@@ -58,8 +58,9 @@
   using the stale map. A deployment request authorizes this local metadata
   refresh and a separate commit containing only `deployments.yaml` when the
   refresh changes it. Make that commit before publishing deployment commits or
-  operating on guests; do not combine it with application-code changes. This
-  does not expand the requested deployment scope.
+  operating on guests; use the commit-message time format defined in
+  `.github/skills/refresh-deployments/SKILL.md` and do not combine it with
+  application-code changes. This does not expand the requested deployment scope.
 - Read the root-level deployments.yaml before planning deployment or remote
   validation. Match stack directory names to guest hostnames, including
   parent directories for nested stacks, and apply the exceptions below.

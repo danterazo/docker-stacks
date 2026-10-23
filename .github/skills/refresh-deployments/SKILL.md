@@ -33,9 +33,10 @@ whether the guest still belongs there.
   edits and comments. When this refresh is part of a deployment, summarize the
   map changes and commit only `deployments.yaml` in its own commit before
   publishing deployment commits or operating on guests. Use a concise message
-  describing the changes, or `Persist cluster state as of YYYY-MM-DD @ h:mm AM/PM`
-  using the map's America/Chicago date and time. Do not include application code
-  or unrelated changes in this commit.
+  describing the changes, or `Persist cluster state as of YYYY-MM-DD @ h:mmam CDT`
+  using the map's America/Chicago date and time; use `CST` when appropriate for
+  that date. Keep the meridiem lowercase and attached to the time. Do not include
+  application code or unrelated changes in this commit.
 - If required discovery is incomplete, ownership is ambiguous, access fails,
   or validation fails, stop before publishing or guest deployment operations.
   Report the blocker; do not fall back to the old map or publish a partial
