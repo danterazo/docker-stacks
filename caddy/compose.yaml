@@ -31,10 +31,13 @@ services:
       - tailscale.env
     volumes:
       - /var/lib/tailscale/:/var/lib/tailscale/:rw
+      - ./tailscale/serve.json:/etc/tailscale/serve.json:ro
+      - ./keepalived/check-caddy.sh:/etc/tailscale/check-service.sh:ro
+      - ../+common/bin/tailscale-service-healthcheck.sh:/usr/local/bin/tailscale-service-healthcheck.sh:ro
     healthcheck:
-      test: [CMD, wget, -q, --spider, http://127.0.0.1:9002/healthz]
-      interval: 30s
-      timeout: 5s
+      test: [CMD, /bin/sh, /usr/local/bin/tailscale-service-healthcheck.sh]
+      interval: 10s
+      timeout: 15s
       retries: 3
       start_period: 10m
 
