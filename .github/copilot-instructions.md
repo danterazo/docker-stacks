@@ -37,7 +37,7 @@
   configure remote access or change authentication, host-key verification,
   or trust relationships.
 - Before using a VM alias, inspect its effective settings with `ssh -G
-  <alias>` and confirm `id -un` after connecting. OpenSSH uses the first
+<alias>` and confirm `id -un` after connecting. OpenSSH uses the first
   configured value for each option; keep host-specific `User` entries before
   broad `Host *` defaults. Never bypass an unknown or changed host key.
 
@@ -255,6 +255,12 @@
   stopped guests or overwrite unrelated local changes without required approval.
 - Share stack shell helpers through `+common`, using stack-local autoenv aliases
   rather than command symlinks. Do not restore the global dotfiles IPInfo alias.
+- Keep `+common/` for helpers genuinely shared across stacks or hosts. Put
+  hardware- or host-specific scripts in a host-specific directory and include
+  it only in that host's sparse-checkout profile.
+- Radeon V620 power-management helpers are specific to VM 105 (`radeon-vm`):
+  keep them under `/docker/radeon-vm/`, never under `+common/`, and include that
+  directory only in the `radeon-vm` bootstrap profile.
 - Prefer one public `.env` and one ignored `.secrets` file per stack. Group
   service-specific settings with commented sections instead of separate VPN
   secret files unless a concrete isolation requirement calls for it. Use
