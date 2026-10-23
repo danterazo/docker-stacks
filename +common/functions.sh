@@ -4,6 +4,7 @@
 dpull() {
 	# local variables
 	local root_dir="/docker"
+	local branch
 	local app_dir
 	local active_services
 
@@ -15,7 +16,17 @@ dpull() {
 
 	# pull latest changes from Git
 	cd "$root_dir" || return 1
-	git pull || return 1
+	branch=$(git branch --show-current) || return 1
+	if [ "$branch" != "main" ]; then
+		echo "ERROR: Docker updates require the main branch."
+		return 1
+	fi
+	git fetch origin main || return 1
+	if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+		echo "ERROR: Local Docker repository is ahead of or diverged from origin/main."
+		return 1
+	fi
+	git merge --ff-only FETCH_HEAD || return 1
 
 	# iterate over each app directory and run Docker Compose commands
 	for app_dir in "$root_dir"/*/; do

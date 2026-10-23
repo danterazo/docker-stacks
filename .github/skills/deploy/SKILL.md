@@ -77,11 +77,10 @@ for full functional, health, log, or visual validation.
    preserve it and stop that guest without pulling or cleaning it. Continue
    independent preflight for other targets.
 
-`dpull` uses plain `git pull`, which can create a guest-local merge commit when
-the guest branch is ahead of the published target. A clean worktree is not
-enough: verify that the guest's current `HEAD` is an ancestor of the exact
-published SHA. Stop on any local-ahead or divergent history; do not use `git
-pull` to reconcile guest branches.
+`dpull` fetches `origin/main`, verifies the guest's current `HEAD` is an
+ancestor of `FETCH_HEAD`, then merges with `--ff-only`. It stops on local-ahead
+or divergent history and never creates guest-local merge commits. Keep this
+guard even though deployment preflight performs the same ancestry check.
 
 ## Networking Order
 

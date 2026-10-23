@@ -194,7 +194,7 @@ fi
 cd "${HOME_DIR}" || exit 1
 if [ "${REPO_CREATED}" = "0" ]; then
 	dante_git -C "${HOME_DIR}" remote set-url origin "${REPO_URL}" &&
-		dante_git -C "${HOME_DIR}" pull || exit 1
+		dante_git -C "${HOME_DIR}" pull --ff-only || exit 1
 fi
 
 # host-specific sparse profiles
