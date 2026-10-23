@@ -21,6 +21,8 @@ services:
   flask:
     image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
     container_name: audiomuse-flask
+    environment:
+      SERVICE_TYPE: flask
     ports:
       - 8000:8000/tcp
     env_file:
@@ -48,10 +50,11 @@ services:
   audiomuse-worker:
     image: ghcr.io/neptunehub/audiomuse-ai:3.6.4-nvidia
     container_name: audiomuse-worker
+    environment:
+      SERVICE_TYPE: worker
     env_file:
       - .env
       - .secrets
-      - worker.env
     volumes:
       - ./data/worker-plugins/:/app/plugin/installed/:rw
     depends_on:

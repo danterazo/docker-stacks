@@ -267,11 +267,13 @@
   secret files unless a concrete isolation requirement calls for it. Use
   `gluetun/` for Gluetun runtime configuration and mirror that name in reference
   examples. Update Git and code-sync exclusions before moving private files.
-- Keep only PUID and PGID in Compose `environment` blocks. Put other
-  non-secret environment keys in the service's `.env` file, or its existing
-  dedicated env file such as `vpn.env`; preserve service-specific `env_file`
-  wiring. Keep credentials in ignored secret files or profiles, not tracked env
-  files. Do not restore user-removed server/city filters without approval.
+- Compose `environment` blocks should primarily contain PUID, PGID, and
+  service- or stack-specific keys such as SERVICE_TYPE. Put role-specific values
+  directly in each service's block rather than creating extra env files just
+  for overrides. Keep shared non-secret settings in one public `.env` per stack;
+  retain dedicated env files only for a concrete application or isolation need.
+  Keep credentials in ignored secret files or profiles, not tracked env files.
+  Do not restore user-removed server/city filters without approval.
 - In Compose YAML, leave strings unquoted unless quotes are required by YAML
   syntax or to preserve the intended string value/type. Quote values that YAML
   would otherwise parse as a number, boolean, null, or another unintended type.
