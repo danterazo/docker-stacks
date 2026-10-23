@@ -35,7 +35,7 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   guests in the conversation: deploy all pending changes. Fetch published
   `main`, then for each running Docker guest compare its `/docker` HEAD with
   `origin/main` and select it when files in its sparse paths changed. Changes
-  to shared paths such as `+common/` or `bootstrap.sh` select every guest.
+  to shared paths such as `_common/` or `bootstrap.sh` select every guest.
   Report guests already at `origin/main` as up to date and skip them.
 - `/deploy-deep` in an existing thread: target only the guests whose stacks or
   guest IDs were edited, deployed, or explicitly named earlier in that
@@ -76,8 +76,8 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   trust relationships.
 - Per guest, first complete Bootstrap Changes below when applicable, then
   stop every top-level stack with `dcd -v`
-  (`dcd` is the `docker compose down` alias in `+common/aliases.sh`), run
-  `dpull` from `+common/functions.sh`, then validate startup. Stopping first
+  (`dcd` is the `docker compose down` alias in `_common/aliases.sh`), run
+  `dpull` from `_common/functions.sh`, then validate startup. Stopping first
   forces a clean recreate, so validation proves the stacks start from the
   new definitions rather than surviving as old containers.
 - Use `dpull`, not `dupull`. `dupull` only adds the `upgrade` alias (APT
@@ -453,7 +453,7 @@ projects safely:
 set -e
 test "$(id -un)" = dante
 cd /docker
-source /docker/+common/functions.sh
+source /docker/_common/functions.sh
 declare -F dpull >/dev/null
 # dcd -v in every stack dpull will bring up, using the pre-pull definitions
 for app_dir in /docker/*/ /docker/radeon-vm/*/; do

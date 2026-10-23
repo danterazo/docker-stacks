@@ -18,7 +18,7 @@ for full functional, health, log, or visual validation.
   to exactly the matching guests; a stack selects each guest that runs it.
 - A free-form "deploy this fix" request is not `/deploy all`: target only the
   guests the change actually affects, using evidence (for example, which guests
-  have the faulty state). Shared files such as `bootstrap.sh` or `+common/` do
+  have the faulty state). Shared files such as `bootstrap.sh` or `_common/` do
   not make every guest relevant. Ask if the affected set is unclear.
 - A `/deploy` request authorizes pushing already-committed changes on local
   `main` to `origin/main`, then running `dupull` on the selected running
@@ -128,8 +128,8 @@ set -e
 test "$(id -un)" = dante
 cd /docker
 shopt -s expand_aliases
-source /docker/+common/aliases.sh
-source /docker/+common/functions.sh
+source /docker/_common/aliases.sh
+source /docker/_common/functions.sh
 declare -F dupull >/dev/null
 alias upgrade >/dev/null
 dupull

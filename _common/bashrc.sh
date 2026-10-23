@@ -34,8 +34,8 @@ if [[ -r "$HOME/.config/autoenv/autoenv.sh" ]]; then
 fi
 
 # always start in app-specific hostname path
-if [[ -r /docker/+common/auto-cd.sh ]]; then
-	source /docker/+common/auto-cd.sh
+if [[ -r /docker/_common/auto-cd.sh ]]; then
+	source /docker/_common/auto-cd.sh
 fi
 
 : 'STANDARD UBUNTU DEFAULTS'

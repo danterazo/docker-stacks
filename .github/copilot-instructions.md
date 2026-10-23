@@ -196,10 +196,10 @@
 - radeon-vm is VM 105 and hosts the separate radeon-vm/ollama and
   radeon-vm/vllm stacks. Ollama
   is the primary engine; vllm is opt-in through its evaluation Compose profile.
-  Keep radeon-vm and +common in its sparse checkout. Routine
+  Keep radeon-vm and _common in its sparse checkout. Routine
   updates skip stacks with no active Compose services; do not enable the
   evaluation profile implicitly or treat absent GPU passthrough as ready.
-- Shared code such as bootstrap.sh and +common/ may affect multiple
+- Shared code such as bootstrap.sh and _common/ may affect multiple
   mapped deployments. Establish the affected targets before validation.
 - When deploying a new stack directory to an LXC or VM, first inspect its
   current sparse-checkout mode, patterns, and included paths as dante in
@@ -268,13 +268,13 @@
   before deriving examples. Live guest files are authoritative; preserve
   differing guest variants instead of letting the last pull win. Do not start
   stopped guests or overwrite unrelated local changes without required approval.
-- Share stack shell helpers through `+common`, using stack-local autoenv aliases
+- Share stack shell helpers through `_common`, using stack-local autoenv aliases
   rather than command symlinks. Do not restore the global dotfiles IPInfo alias.
-- Keep `+common/` for helpers genuinely shared across stacks or hosts. Put
+- Keep `_common/` for helpers genuinely shared across stacks or hosts. Put
   hardware- or host-specific scripts in a host-specific directory and include
   it only in that host's sparse-checkout profile.
 - Radeon V620 power-management helpers are specific to VM 105 (`radeon-vm`):
-  keep them under `/docker/radeon-vm/`, never under `+common/`, and include that
+  keep them under `/docker/radeon-vm/`, never under `_common/`, and include that
   directory only in the `radeon-vm` bootstrap profile.
 - Prefer one public `.env` and one ignored `.secrets` file per stack. Group
   service-specific settings with commented sections instead of separate VPN

@@ -33,7 +33,7 @@ services:
       - /var/lib/tailscale/:/var/lib/tailscale/:rw
       - ./tailscale/serve.json:/etc/tailscale/serve.json:ro
       - ./keepalived/check-caddy.sh:/etc/tailscale/check-service.sh:ro
-      - ../+common/bin/tailscale-service-healthcheck.sh:/usr/local/bin/tailscale-service-healthcheck.sh:ro
+      - ../_common/bin/tailscale-service-healthcheck.sh:/usr/local/bin/tailscale-service-healthcheck.sh:ro
     healthcheck:
       test: [CMD, /bin/sh, /usr/local/bin/tailscale-service-healthcheck.sh]
       interval: 10s

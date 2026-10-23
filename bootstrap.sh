@@ -214,12 +214,29 @@ fi
 
 # host-specific sparse profiles
 read -r -a host_apps <<<"${HOST_APPS[${HOST_NAME}]:-${HOST_NAME}}"
-sparse_paths=('/+common/' '/bootstrap.sh' '/.gitignore') # +common
-sparse_paths+=('!/+common/radeon/')
+sparse_paths=('/_common/' '/bootstrap.sh' '/.gitignore')
 for app in "${host_apps[@]}"; do
 	sparse_paths+=("/${app}/")
 done
-dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${sparse_paths[@]}" || true
+if [ "${REPO_CREATED}" = "0" ] && [ "$(dante_git -C "${HOME_DIR}" config --get core.sparseCheckout)" = "true" ]; then
+	if [ "$(dante_git -C "${HOME_DIR}" config --get core.sparseCheckoutCone)" = "true" ]; then
+		existing_paths="$(dante_git -C "${HOME_DIR}" sparse-checkout list)" || exit 1
+		while IFS= read -r existing_path; do
+			[ -n "${existing_path}" ] || continue
+			[ "${existing_path}" = "+common" ] && existing_path="_common"
+			[ "${existing_path}" = ".common" ] && existing_path="_common"
+			sparse_paths+=("/${existing_path}/")
+		done <<<"${existing_paths}"
+	else
+		existing_patterns="$(dante_git -C "${HOME_DIR}" rev-parse --git-path info/sparse-checkout)" || exit 1
+		while IFS= read -r existing_pattern || [ -n "${existing_pattern}" ]; do
+			existing_pattern="${existing_pattern//.common/_common}"
+			sparse_paths+=("${existing_pattern//+common/_common}")
+		done <"${existing_patterns}"
+	fi
+fi
+sparse_paths+=('!/_common/radeon/')
+dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${sparse_paths[@]}" || exit 1
 
 # move to app dir if the host contains only a single stack
 if [ -d "${HOME_DIR}/${HOST_NAME}" ]; then
@@ -240,15 +257,15 @@ sudo rm -f /etc/profile.d/00_lxc-details.sh || true
 # remove stale bash profile overrides
 sudo rm -f /root/.bash_profile /home/dante/.bash_profile || true
 
-# link login scripts into /etc/profile.d; executable helpers belong in +common/bin
+# link login scripts into /etc/profile.d; executable helpers belong in _common/bin
 for base in aliases.sh auto-cd.sh fastfetch.sh functions.sh; do
-	script="${HOME_DIR}/+common/${base}"
+	script="${HOME_DIR}/_common/${base}"
 	[ -e "$script" ] || continue
 	sudo ln -sf "$script" "/etc/profile.d/00-${base}"
 done
 
 # link the shared fastfetch config to both root and dante users
-FASTFETCH_CONFIG="${HOME_DIR}/+common/configs/fastfetch.jsonc"
+FASTFETCH_CONFIG="${HOME_DIR}/_common/configs/fastfetch.jsonc"
 if [ -f "${FASTFETCH_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/fastfetch"
@@ -260,7 +277,7 @@ else
 fi
 
 # link the shared direnv config to both root and dante users
-DIRENV_CONFIG="${HOME_DIR}/+common/configs/direnv.toml"
+DIRENV_CONFIG="${HOME_DIR}/_common/configs/direnv.toml"
 if [ -f "${DIRENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/direnv" || exit 1
@@ -271,7 +288,7 @@ else
 	exit 1
 fi
 
-AUTOENV_CONFIG="${HOME_DIR}/+common/configs/autoenv.sh"
+AUTOENV_CONFIG="${HOME_DIR}/_common/configs/autoenv.sh"
 if [ -f "${AUTOENV_CONFIG}" ]; then
 	for user_home in /home/dante /root; do
 		sudo install -d -o "$(basename "${user_home}")" -g "$(basename "${user_home}")" "${user_home}/.config/autoenv" || exit 1
@@ -330,15 +347,15 @@ sudo visudo -c # validate sudoer file syntax
 
 : 'BASH CONFIG'
 # share one bashrc entrypoint across accounts
-if [ ! -f /docker/+common/bashrc.sh ]; then
-	echo "ERROR: /docker/+common/bashrc.sh not found. Sparse-checkout may have failed."
+if [ ! -f /docker/_common/bashrc.sh ]; then
+	echo "ERROR: /docker/_common/bashrc.sh not found. Sparse-checkout may have failed."
 	exit 1
 fi
 
 # create symlinks
 sudo mkdir -p /home/dante
-sudo ln -sf /docker/+common/bashrc.sh /root/.bashrc
-sudo ln -sf /docker/+common/bashrc.sh /home/dante/.bashrc
+sudo ln -sf /docker/_common/bashrc.sh /root/.bashrc
+sudo ln -sf /docker/_common/bashrc.sh /home/dante/.bashrc
 
 : 'REMINDERS FOR USER'
 echo -e "\nDouble-check IP in PVE UI before proceeding! \n\n"
