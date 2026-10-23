@@ -92,7 +92,10 @@ the sparse-checkout patterns under the actual Git directory as dante in
 update that source profile when needed. After fetching the published revision,
 add the required stack path in the guest's existing cone or non-cone mode,
 preserving all existing stack paths and exclusions, then fast-forward and
-verify the new Compose files exist before deployment commands. Review guest
+verify the new Compose files exist before deployment commands.
+`git sparse-checkout add` inherits the configured mode; do not pass
+`--cone` or `--no-cone` to `add`, which may not support those options.
+Review guest
 changes and collisions first; never overwrite local work or replace the entire
 profile with a guessed list. Do not run full bootstrap solely to change sparse
 checkout. This step is for new stack directories, not extra services added to
