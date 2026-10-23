@@ -11,7 +11,8 @@ services:
       - /mnt/backups/:/backups/:rw # LXC bind mount of tank/backups/apps/plex-music
       - /mnt/music/:/media/music/:rw # LXC bind mount of tank/media/music
       - /mnt/audiobooks/:/media/audiobooks/:rw # LXC bind mount of tank/media/audiobooks
-      - /dev/shm/plex-transcode/:/transcode/:rw
+    tmpfs:
+      - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
     networks:
       - plex-music-net
 
