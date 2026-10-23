@@ -13,7 +13,7 @@ services:
     shm_size: 4gb
     ports:
       - 8000:8000/tcp
-    # Start with two V620s; set VLLM_TENSOR_PARALLEL_SIZE=4 after all four are attached and validated.
+    # Match tensor parallelism to the attached and validated V620 count.
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
@@ -32,7 +32,7 @@ services:
       - --dtype
       - float16
       - --tensor-parallel-size
-      - ${VLLM_TENSOR_PARALLEL_SIZE:-4}
+      - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
       - --max-model-len
       - ${CONTEXT_SIZE:-8192}
       - --max-num-seqs

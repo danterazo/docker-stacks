@@ -11,7 +11,7 @@ services:
     env_file: .env
     ports:
       - 11434:11434/tcp
-    # TODO: Pass through available V620s; verify Ollama sees each card, starting with two.
+    # Add compose.gpu.yaml only after guest GPU passthrough is validated.
     volumes:
       - ./data/:/state/:rw
       - models_nfs:/models/:rw,nocopy
