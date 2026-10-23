@@ -33,6 +33,11 @@ services:
     env_file:
       - .env
       - keepalived.env
+    environment:
+      KEEPALIVED_CONF_TEMPLATE: /etc/keepalived/keepalived.conf.template
+    volumes:
+      - ./keepalived/keepalived.conf.template:/etc/keepalived/keepalived.conf.template:ro
+      - ./keepalived/check-caddy.sh:/etc/keepalived/check-caddy.sh:ro
 
 networks:
   caddy-net:
