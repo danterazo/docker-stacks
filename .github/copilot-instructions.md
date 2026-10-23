@@ -40,6 +40,11 @@
 <alias>` and confirm `id -un` after connecting. OpenSSH uses the first
   configured value for each option; keep host-specific `User` entries before
   broad `Host *` defaults. Never bypass an unknown or changed host key.
+- If a first-contact authenticity prompt or unknown host key blocks approved
+  access, use the question tool to ask the user to run the exact command, such
+  as `ssh nvidia-vm`, verify and accept the key in their own terminal, exit, and
+  confirm completion. Then retry with strict checking. Do not accept keys or
+  change known_hosts yourself; changed-key warnings require investigation.
 
 ## Deployment map and validation
 
