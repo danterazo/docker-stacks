@@ -11,7 +11,8 @@ services:
       - ./data/plex/:/config/:rw
       - backups_virtiofs:/backups/:rw
       - videos_virtiofs:/media/videos/:rw
-      - /dev/shm/plex-transcode/:/transcode/:rw
+    tmpfs:
+      - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
     networks:
       - plex-video-net
 
