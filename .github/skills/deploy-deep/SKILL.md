@@ -336,10 +336,18 @@ caddyserver.com while the guest's Caddy is stopped.
   expected, but verify it before use. Report untracked files and preserve them
   during upgrades; they do not block deployment unless they collide with
   incoming paths or prevent safe operation. Leave cleanup for manual review
-  or a follow-up request. Preserve tracked remote changes; do not reset, stash,
-  clean, force-pull, or bypass Git ownership checks. Do not print credentials
-   or environment files. Stop on divergence or unrelated upstream changes
-   unless their inclusion is explicitly approved. `dpull` uses plain
+  or a follow-up request. Preserve tracked remote changes; do not reset, clean,
+  force-pull, or bypass Git ownership checks. A temporary stash may be used
+  only to preserve exact worktree changes needed for an approved merge/update:
+  inspect and record the preexisting stash list, stage no unrelated changes,
+  stash only the exact required paths, record the new stash object ID, and
+  verify its contents. After the operation, restore and compare the saved work
+  with its original state, then drop only that exact temporary stash. Never
+  drop preexisting stashes or use stashing to discard work. If restoration
+  conflicts or cannot be verified, retain the stash and stop for review. Do not
+  print credentials or environment files. Stop on divergence or unrelated
+  upstream changes unless their inclusion is explicitly approved. `dpull` uses
+  plain
    `git pull`, so confirm after `git fetch` that it would fast-forward.
    Record the predeploy SHA.
 5. Review the deployed `dcd` alias and `dpull` definition before running
