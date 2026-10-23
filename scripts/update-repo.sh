@@ -1,5 +1,9 @@
 #!/bin/bash
 ## Pull changes in all Git repos
+if (return 0 2>/dev/null); then
+	printf 'Run this script with bash; do not source it\n' >&2
+	return 1
+fi
 set -e
 
 LXCS=(100 101)

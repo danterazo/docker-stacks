@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+if (return 0 2>/dev/null); then
+	printf 'Run this installer with Bash; do not source it\n' >&2
+	return 1
+fi
 set -euo pipefail
 
 repo_root=/docker

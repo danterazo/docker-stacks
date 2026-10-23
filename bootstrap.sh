@@ -168,12 +168,17 @@ AUTOENV_URL="git@github.com:hyperupcall/autoenv.git"
 for autoenv_user in root dante; do
 	autoenv_dir="$(getent passwd "${autoenv_user}" | cut -d: -f6)/.autoenv"
 	if user_git "${autoenv_user}" -C "${autoenv_dir}" rev-parse --git-dir >/dev/null 2>&1; then
-		user_git "${autoenv_user}" -C "${autoenv_dir}" remote set-url origin "${AUTOENV_URL}" || exit 1
-		user_git "${autoenv_user}" -C "${autoenv_dir}" pull --ff-only || exit 1
+		if ! user_git "${autoenv_user}" -C "${autoenv_dir}" remote set-url origin "${AUTOENV_URL}"; then
+			printf 'WARNING: Could not set the Autoenv remote for %s; continuing bootstrap.\n' "${autoenv_user}" >&2
+		elif ! user_git "${autoenv_user}" -C "${autoenv_dir}" pull --ff-only; then
+			printf 'WARNING: Could not update Autoenv for %s; continuing bootstrap.\n' "${autoenv_user}" >&2
+		fi
 	elif sudo -u "${autoenv_user}" test -e "${autoenv_dir}"; then
 		printf 'WARNING: Existing Autoenv path is not a Git checkout; leaving it untouched: %s\n' "${autoenv_dir}" >&2
 	else
-		user_git "${autoenv_user}" clone "${AUTOENV_URL}" "${autoenv_dir}" || exit 1
+		if ! user_git "${autoenv_user}" clone "${AUTOENV_URL}" "${autoenv_dir}"; then
+			printf 'WARNING: Could not clone Autoenv for %s; continuing bootstrap.\n' "${autoenv_user}" >&2
+		fi
 	fi
 done
 
