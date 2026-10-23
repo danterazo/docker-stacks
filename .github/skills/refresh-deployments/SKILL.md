@@ -262,9 +262,10 @@ existing snapshot unchanged rather than publishing a partial refresh.
 - User-confirmed placements: VM 101 runs `immich`, `plex-video`, and
   `tautulli`; LXC 108 runs development `plex-video` and `tautulli`; LXC 120
   runs `plex-music` and `tautulli`. Preserve these exceptions.
-- VM 105 (`radeon-vm`) runs the separate `ollama` and `vllm` stacks, with
+- VM 105 (`radeon-vm`) runs the separate `radeon-vm/ollama` and
+  `radeon-vm/vllm` stacks, with
   Ollama primary and vLLM opt-in through its `evaluation` profile. Preserve
-  this placement exception even though neither directory matches the hostname.
+  both stacks beneath the hostname-matched parent directory in its sparse checkout.
 - LXCs 102 and 108 are development deployments, separate from VM 101. They
   were stopped during initial discovery; query current state when needed
   without storing it or starting them for validation.
@@ -309,10 +310,10 @@ existing snapshot unchanged rather than publishing a partial refresh.
 4. Summarize additions, removals, migrations, address changes, tag changes,
    unresolved mappings, and incomplete reads. State that no remote changes were made.
 5. For a deployment-triggered refresh, commit the validated `deployments.yaml`
-  change by itself, after checking that no unrelated edits are included. Report
-  the commit message and summary before proceeding to deployment publishing or
-  guest operations. If the validated file has no diff, no metadata commit is
-  needed.
+   change by itself, after checking that no unrelated edits are included. Report
+   the commit message and summary before proceeding to deployment publishing or
+   guest operations. If the validated file has no diff, no metadata commit is
+   needed.
 
 After any authorized operation that could affect this map, repeat the full
 refresh after the operation completes and before handoff or remote validation.

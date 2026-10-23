@@ -14,7 +14,6 @@ sudo do-release-upgrade -f DistUpgradeViewNonInteractive
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
 	["nvidia-vm"]='immich plex-video'
-	["radeon-vm"]='ollama vllm'
 )
 
 : 'SYSTEM CONFIG'
@@ -201,9 +200,6 @@ fi
 read -r -a host_apps <<<"${HOST_APPS[${HOST_NAME}]:-${HOST_NAME}}"
 sparse_paths=('/+common/' '/bootstrap.sh' '/.gitignore') # +common
 sparse_paths+=('!/+common/radeon/')
-if [[ "${HOST_NAME}" == "radeon-vm" ]]; then
-	sparse_paths+=('/radeon-vm/')
-fi
 for app in "${host_apps[@]}"; do
 	sparse_paths+=("/${app}/")
 done

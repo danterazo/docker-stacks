@@ -29,7 +29,7 @@ dpull() {
 	git merge --ff-only FETCH_HEAD || return 1
 
 	# iterate over each app directory and run Docker Compose commands
-	for app_dir in "$root_dir"/*/; do
+	for app_dir in "$root_dir"/*/ "$root_dir"/radeon-vm/*/; do
 		[ -d "$app_dir" ] || continue
 		[ -f "$app_dir/compose.yaml" ] || [ -f "$app_dir/compose.yml" ] || continue
 

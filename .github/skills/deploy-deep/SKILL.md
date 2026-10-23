@@ -86,7 +86,8 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   explicitly asks for OS upgrades, with separate approval for package
   upgrades and removal.
 - Neither step is stack-scoped. Both cover every top-level stack in the
-  guest checkout (`/docker/*/compose.y*ml`), including any `include:` children.
+  guest checkout (`/docker/*/compose.y*ml` and
+  `/docker/radeon-vm/*/compose.y*ml`), including any `include:` children.
   qBittorrent and Soulseek are independent top-level stacks. `dpull` runs plain
   `git pull`, then per stack `docker compose pull --ignore-buildable`,
   `build --pull --no-cache`, and `up --build -d --remove-orphans`, returning
@@ -192,37 +193,37 @@ Do not expand the selected guest scope.
    masks pull failures: explicitly fast-forward as `dante` and verify the
    intended revision before invoking the alias; check HEAD again afterward.
    Preserve the old Compose definitions and active-project snapshot before
-  this pull. If changed definitions cannot safely tear down the old projects,
-  block mutation for that guest, record the required targeted teardown, and
-  continue independent read-only preflight. Include the decision in the
-  consolidated approval checkpoint; never silently omit the old projects.
+   this pull. If changed definitions cannot safely tear down the old projects,
+   block mutation for that guest, record the required targeted teardown, and
+   continue independent read-only preflight. Include the decision in the
+   consolidated approval checkpoint; never silently omit the old projects.
 2. The user has given standing approval to run required bootstrap on selected
-  deployment guests without reconfirmation. Report which guests require it
-  and inspect the incoming script first. This approval covers the script's
-  Ubuntu release upgrade, package installation, possible Docker restart,
-  ownership/permission/group/sudo changes, and SSH key/authentication/trust
-  changes. These actions outside `bootstrap.sh` still need their own approval.
-  Do not suppress bootstrap failures or silently skip phases. Never reboot
-  implicitly, run bootstrap locally or on a Proxmox owner, or bypass failed
-  SSH verification to reach a guest.
-  Before bootstrap, enumerate Compose bind mounts whose host sources are
-  inside `/docker` and inspect their existing numeric owner/group and modes.
-  Bootstrap ownership repair may change the `/docker` root and `.git`
-  metadata only. Never recursively chown the worktree, because ignored
-  application data can contain database datadirs. If Git cannot update a
-  tracked path as `dante`, stop and inspect that exact repository path; do not
-  broaden the repair to app data. Never recursively chown application data
-  merely to clear a health failure.
+   deployment guests without reconfirmation. Report which guests require it
+   and inspect the incoming script first. This approval covers the script's
+   Ubuntu release upgrade, package installation, possible Docker restart,
+   ownership/permission/group/sudo changes, and SSH key/authentication/trust
+   changes. These actions outside `bootstrap.sh` still need their own approval.
+   Do not suppress bootstrap failures or silently skip phases. Never reboot
+   implicitly, run bootstrap locally or on a Proxmox owner, or bypass failed
+   SSH verification to reach a guest.
+   Before bootstrap, enumerate Compose bind mounts whose host sources are
+   inside `/docker` and inspect their existing numeric owner/group and modes.
+   Bootstrap ownership repair may change the `/docker` root and `.git`
+   metadata only. Never recursively chown the worktree, because ignored
+   application data can contain database datadirs. If Git cannot update a
+   tracked path as `dante`, stop and inspect that exact repository path; do not
+   broaden the repair to app data. Never recursively chown application data
+   merely to clear a health failure.
 3. The current alias uses `runuser`, requiring a guest administrative shell;
-  the standing bootstrap approval includes that shell through the existing
-  approved access method, not new remote access or trust configuration.
-  It cannot simply be invoked as unprivileged `dante`. Inspect
+   the standing bootstrap approval includes that shell through the existing
+   approved access method, not new remote access or trust configuration.
+   It cannot simply be invoked as unprivileged `dante`. Inspect
    and load the deployed alias explicitly in noninteractive Bash, enabling
    alias expansion before parsing its invocation (for example, invoke the
    reviewed alias using `eval 'bootstrap'` after sourcing its definition).
-  Set `HOME=/root` in that administrative shell before sourcing or invoking
-  the alias. `pct exec` may otherwise provide `/` as `HOME`, causing the
-  script's `$HOME/.autoenv` setup to create `/.autoenv`.
+   Set `HOME=/root` in that administrative shell before sourcing or invoking
+   the alias. `pct exec` may otherwise provide `/` as `HOME`, causing the
+   script's `$HOME/.autoenv` setup to create `/.autoenv`.
    Do not substitute `bash bootstrap.sh`: the alias sources the script.
 4. Check output from every bootstrap phase, not only its final status;
    neither the alias nor script guarantees all earlier failures propagate.
@@ -243,15 +244,15 @@ and `external: true` volumes are untouched. Removing a local-driver NFS
 volume only unmounts it and deletes Docker's definition; server data stays.
 A static audit of the published stacks on 2026-10-16 found `-v` safe for all:
 
-| Stack                             | Removed by `-v`                                                                                                       | Effect                                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| adguardhome                       | nothing; state and configs are bind mounts                                                                            | none                                                                                              |
-| caddy                             | anonymous `/config` and `/data` outside the `./data` bind at `/data/caddy`                                            | autosave regenerates from the Caddyfile; certificates and ACME accounts persist in `./data`       |
-| gluetun (+ qbittorrent, soulseek) | qBittorrent anonymous `/config` outside the `/config/qBittorrent` bind                                                | download data is an LXC bind mount; qBittorrent loses only `$HOME/.cache`                         |
-| immich                            | virtiofs volume definitions                                                                                           | Data persists; Postgres and Valkey `/data` are bind mounts; Valkey uses append-only persistence     |
-| plex-music, plex-video            | plex-video virtiofs volume definitions; plex-music nothing (LXC bind mounts)                                          | Data persists; Plex and Tautulli config are bind mounts                                           |
-| pocket-id, spoolman               | nothing; data is a bind mount                                                                                         | none                                                                                              |
-| common-dockge-agent (undeployed)  | nothing; its volume is external                                                                                       | none                                                                                              |
+| Stack                             | Removed by `-v`                                                              | Effect                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| adguardhome                       | nothing; state and configs are bind mounts                                   | none                                                                                            |
+| caddy                             | anonymous `/config` and `/data` outside the `./data` bind at `/data/caddy`   | autosave regenerates from the Caddyfile; certificates and ACME accounts persist in `./data`     |
+| gluetun (+ qbittorrent, soulseek) | qBittorrent anonymous `/config` outside the `/config/qBittorrent` bind       | download data is an LXC bind mount; qBittorrent loses only `$HOME/.cache`                       |
+| immich                            | virtiofs volume definitions                                                  | Data persists; Postgres and Valkey `/data` are bind mounts; Valkey uses append-only persistence |
+| plex-music, plex-video            | plex-video virtiofs volume definitions; plex-music nothing (LXC bind mounts) | Data persists; Plex and Tautulli config are bind mounts                                         |
+| pocket-id, spoolman               | nothing; data is a bind mount                                                | none                                                                                            |
+| common-dockge-agent (undeployed)  | nothing; its volume is external                                              | none                                                                                            |
 
 For a deployment that introduces or changes the Immich Valkey or AudioMuse
 plugin bind mounts, first inspect the existing mounts through approved
@@ -314,66 +315,66 @@ caddyserver.com while the guest's Caddy is stopped.
    before using recorded observations.
    Confirm each owner, guest ID/type, and in-guest hostname; `pct` is for LXCs,
    never VMs. Do not start stopped guests; report skipped deployments.
-  Read `/ai/pending-changes.md` for unresolved target-specific service or
-  network blockers. Do not bootstrap, stop, or update a blocked guest until
-  its failing baseline has been rechecked and passes; a container-local
-  healthcheck or successful deployment helper does not clear the blocker.
+   Read `/ai/pending-changes.md` for unresolved target-specific service or
+   network blockers. Do not bootstrap, stop, or update a blocked guest until
+   its failing baseline has been rechecked and passes; a container-local
+   healthcheck or successful deployment helper does not clear the blocker.
 2. NVIDIA VM 101 hosts the `immich` and `plex-video` repo directories. Tautulli
    is a service inside the Plex Compose definitions on VM 101 and LXCs 108
    and 120, not a separate required sparse-checkout stack. Inspect actual
    Compose references before inferring additional repo paths.
 3. Inspect local changes and relevant tests. Identify the intended published
-  commit and branch. Alert the user to staged local changes; preserve and
-  exclude all uncommitted local work without blocking deployment. Follow
-  Publish Local Changes for authorized pushes of existing commits. `dpull`
-  retrieves published commits, not local staged or working-tree edits.
+   commit and branch. Alert the user to staged local changes; preserve and
+   exclude all uncommitted local work without blocking deployment. Follow
+   Publish Local Changes for authorized pushes of existing commits. `dpull`
+   retrieves published commits, not local staged or working-tree edits.
 4. Confirm the guest checkout location, repository identity, branch/upstream,
-  current revision, tracked worktree, untracked files, sparse paths, and the
+   current revision, tracked worktree, untracked files, sparse paths, and the
    upstream revision that Git pull would retrieve. Inspect relevant ownership
    first, applying only the standing scoped repair approval in
    `.github/copilot-instructions.md` when needed, and run Git as `dante`.
    Do not probe Git as root or add `safe.directory` exceptions. `/docker` is
-  expected, but verify it before use. Report untracked files and preserve them
-  during upgrades; they do not block deployment unless they collide with
-  incoming paths or prevent safe operation. Leave cleanup for manual review
-  or a follow-up request. Preserve tracked remote changes; do not reset, clean,
-  force-pull, or bypass Git ownership checks. A temporary stash may be used
-  only to preserve exact worktree changes needed for an approved merge/update:
-  inspect and record the preexisting stash list, stage no unrelated changes,
-  stash only the exact required paths, record the new stash object ID, and
-  verify its contents. After the operation, restore and compare the saved work
-  with its original state, then drop only that exact temporary stash. Never
-  drop preexisting stashes or use stashing to discard work. If restoration
-  conflicts or cannot be verified, retain the stash and stop for review. Do not
-  print credentials or environment files. Stop on divergence or unrelated
-  upstream changes unless their inclusion is explicitly approved. `dpull` uses
-  plain
+   expected, but verify it before use. Report untracked files and preserve them
+   during upgrades; they do not block deployment unless they collide with
+   incoming paths or prevent safe operation. Leave cleanup for manual review
+   or a follow-up request. Preserve tracked remote changes; do not reset, clean,
+   force-pull, or bypass Git ownership checks. A temporary stash may be used
+   only to preserve exact worktree changes needed for an approved merge/update:
+   inspect and record the preexisting stash list, stage no unrelated changes,
+   stash only the exact required paths, record the new stash object ID, and
+   verify its contents. After the operation, restore and compare the saved work
+   with its original state, then drop only that exact temporary stash. Never
+   drop preexisting stashes or use stashing to discard work. If restoration
+   conflicts or cannot be verified, retain the stash and stop for review. Do not
+   print credentials or environment files. Stop on divergence or unrelated
+   upstream changes unless their inclusion is explicitly approved. `dpull` uses
+   plain
    `git pull`, so confirm after `git fetch` that it would fast-forward.
    Record the predeploy SHA.
 5. Review the deployed `dcd` alias and `dpull` definition before running
    them; they may differ from this checkout. If they no longer match the
    behavior described here, stop and report. Confirm the expected top-level
-  workloads and disclose that all of them will be stopped and recreated.
-  Run `docker compose ls` from `/docker` as `dante`; the wrong working
-  directory can make Compose search `/root/.env` and emit irrelevant
-  permission warnings.
+   workloads and disclose that all of them will be stopped and recreated.
+   Run `docker compose ls` from `/docker` as `dante`; the wrong working
+   directory can make Compose search `/root/.env` and emit irrelevant
+   permission warnings.
 6. Confirm `dante` can reach the Docker daemon, then snapshot each running
    container's name, state, health, and restart count, plus the active
    Compose projects. Stacks remain down if a later step fails, so this
    snapshot is the reference for both validation and failure reports.
-    Treat this as a hard pre-mutation health gate: before bootstrap, teardown,
-    or image changes, every in-scope container must be running and every
-    configured healthcheck must be healthy. If a container is unhealthy,
-    restarting, or exited, stop that guest's rollout immediately and report
-    the pre-existing failure. If a container is nominally running but its
-    restart history or functional probe suggests instability, compare two
-    read-only container snapshots at least 60 seconds apart; any restart-count
-    increase blocks that guest's rollout. Do not use a weaker probe such as
-    `pg_isready` to override an unhealthy database healthcheck. Resolve and
-    validate pre-existing failures separately before deployment; do not
-    restart, repair permissions, or otherwise mutate them implicitly. For
-    containers without healthchecks, require their documented functional
-    baseline probe before proceeding.
+   Treat this as a hard pre-mutation health gate: before bootstrap, teardown,
+   or image changes, every in-scope container must be running and every
+   configured healthcheck must be healthy. If a container is unhealthy,
+   restarting, or exited, stop that guest's rollout immediately and report
+   the pre-existing failure. If a container is nominally running but its
+   restart history or functional probe suggests instability, compare two
+   read-only container snapshots at least 60 seconds apart; any restart-count
+   increase blocks that guest's rollout. Do not use a weaker probe such as
+   `pg_isready` to override an unhealthy database healthcheck. Resolve and
+   validate pre-existing failures separately before deployment; do not
+   restart, repair permissions, or otherwise mutate them implicitly. For
+   containers without healthchecks, require their documented functional
+   baseline probe before proceeding.
    On both LXCs and Docker VMs (including `nvidia-vm`/101), run Git,
    `docker`, Compose, and deployment helpers as `dante` without `sudo`.
    Historical sudo requirements are not current requirements: verify using
@@ -381,17 +382,17 @@ caddyserver.com while the guest's Caddy is stopped.
    stop and report; do not retry as root, add sudo, or change groups/socket
    permissions. Bootstrap administration is the separate exception above.
 7. Determine service validation commands from the actual Compose runtime and
-  mounted configuration. Inventory each app's actual IP, exposed port,
-  protocol, and webpage/API/health path across every stack that will be
-  recreated, including nested stacks. Resolve published host ports versus
-  container ports, host/shared networking, and configured bind addresses;
-  never use a wildcard bind address as a destination or assume default
-  ports. Use current guest addresses, not stale map entries. Do not print
-  secrets or entire resolved Compose configurations. Record which endpoints
-  are intentionally internal-only and choose an appropriate in-guest probe
-  for those rather than exposing them. For Caddy, plan config validation in
-  its actual image/context and the reverse-proxy checks below. A check
-  against old deployed files is not validation of unpublished local changes.
+   mounted configuration. Inventory each app's actual IP, exposed port,
+   protocol, and webpage/API/health path across every stack that will be
+   recreated, including nested stacks. Resolve published host ports versus
+   container ports, host/shared networking, and configured bind addresses;
+   never use a wildcard bind address as a destination or assume default
+   ports. Use current guest addresses, not stale map entries. Do not print
+   secrets or entire resolved Compose configurations. Record which endpoints
+   are intentionally internal-only and choose an appropriate in-guest probe
+   for those rather than exposing them. For Caddy, plan config validation in
+   its actual image/context and the reverse-proxy checks below. A check
+   against old deployed files is not validation of unpublished local changes.
 
 ## Execute Through the Correct Owner
 
@@ -443,7 +444,7 @@ cd /docker
 source /docker/+common/functions.sh
 declare -F dpull >/dev/null
 # dcd -v in every stack dpull will bring up, using the pre-pull definitions
-for app_dir in /docker/*/; do
+for app_dir in /docker/*/ /docker/radeon-vm/*/; do
 	[ -f "${app_dir}compose.yaml" ] || [ -f "${app_dir}compose.yml" ] || continue
 	echo "== down: ${app_dir}"
 	(cd "$app_dir" && docker compose down -v)
@@ -507,15 +508,15 @@ Choose one HTTP validation route per app before the first mutation:
   not as routine duplicate coverage. A proxy-only pass does not establish
   direct-IP reachability or clear an existing direct-endpoint blocker.
 
-| Service | Functional check |
-| --- | --- |
-| AdGuard Home | Query a benign public name such as `example.com` against each guest's actual IP, not only the VIP. Use `dig +time=3 +tries=1 @<guest-ip> example.com A` or a standard DNS resolver API with an explicit server and timeout. Require a successful response with valid expected records, not merely an open port. Test UDP and TCP where both are configured. Confirm a serving peer before disrupting any instance. |
-| qBittorrent | Run the deployed container healthcheck. The current check calls `/api/v2/transfer/info` from inside the container and requires `connection_status == "connected"`; recheck that contract against the deployed version. Do not require an external-client API request; the API may reject requests from outside its trusted context. Account for the shared Gluetun network namespace. Check its published WebUI as a separate optional reachability check. Do not start downloads, change settings, or log in implicitly. |
-| Gluetun and Soulseek | Run the image's existing read-only healthcheck where present, and test each exposed app's actual health endpoint or expected UI. Gluetun's VPN health does not prove qBittorrent or Soulseek is accessible. Discover rather than invent a Soulseek health endpoint. |
-| Spoolman | Request `/api/v1/health` via the selected route, parse the healthy result, and check the UI via that same route. Use `spools.samskeyti.net` normally, or Caddy's backend IP/port during a Caddy rollout. |
-| Pocket ID | Run `/app/pocket-id healthcheck` inside its container and verify the sign-in page via the selected route: `id.samskeyti.net` normally, or its backend IP/port during a Caddy rollout. Do not perform a sign-in. |
-| Immich, Plex, and Tautulli | Use one documented unauthenticated ping/identity endpoint where needed and verify the UI via the selected route, not duplicate proxy/direct routes. During a Caddy rollout, use backend IP/port and defer proxy-dependent OAuth UI handoffs. Plex's localhost healthcheck does not establish external reachability. Report authentication limits without retrieving credentials or logging in. |
-| Internal dependencies | Use existing read-only native probes from the dependency's own guest/container context. For Immich PostgreSQL, check the Compose healthcheck and inspect bind-mount ownership against the database process UID/GID; `pg_isready` alone is insufficient. For Immich Valkey with AOF enabled, require `PING`, `aof_last_write_status:ok` (strip `\r` first; `INFO` uses CRLF), and write access as the actual Valkey process UID to its data bind mount. The Compose healthcheck stays Immich's Redis-compatible `PING` check. Keep internal ports internal. These checks do not replace the owning app's external probe. |
+| Service                    | Functional check                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AdGuard Home               | Query a benign public name such as `example.com` against each guest's actual IP, not only the VIP. Use `dig +time=3 +tries=1 @<guest-ip> example.com A` or a standard DNS resolver API with an explicit server and timeout. Require a successful response with valid expected records, not merely an open port. Test UDP and TCP where both are configured. Confirm a serving peer before disrupting any instance.                                                                                                                                                                                                      |
+| qBittorrent                | Run the deployed container healthcheck. The current check calls `/api/v2/transfer/info` from inside the container and requires `connection_status == "connected"`; recheck that contract against the deployed version. Do not require an external-client API request; the API may reject requests from outside its trusted context. Account for the shared Gluetun network namespace. Check its published WebUI as a separate optional reachability check. Do not start downloads, change settings, or log in implicitly.                                                                                               |
+| Gluetun and Soulseek       | Run the image's existing read-only healthcheck where present, and test each exposed app's actual health endpoint or expected UI. Gluetun's VPN health does not prove qBittorrent or Soulseek is accessible. Discover rather than invent a Soulseek health endpoint.                                                                                                                                                                                                                                                                                                                                                     |
+| Spoolman                   | Request `/api/v1/health` via the selected route, parse the healthy result, and check the UI via that same route. Use `spools.samskeyti.net` normally, or Caddy's backend IP/port during a Caddy rollout.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Pocket ID                  | Run `/app/pocket-id healthcheck` inside its container and verify the sign-in page via the selected route: `id.samskeyti.net` normally, or its backend IP/port during a Caddy rollout. Do not perform a sign-in.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Immich, Plex, and Tautulli | Use one documented unauthenticated ping/identity endpoint where needed and verify the UI via the selected route, not duplicate proxy/direct routes. During a Caddy rollout, use backend IP/port and defer proxy-dependent OAuth UI handoffs. Plex's localhost healthcheck does not establish external reachability. Report authentication limits without retrieving credentials or logging in.                                                                                                                                                                                                                          |
+| Internal dependencies      | Use existing read-only native probes from the dependency's own guest/container context. For Immich PostgreSQL, check the Compose healthcheck and inspect bind-mount ownership against the database process UID/GID; `pg_isready` alone is insufficient. For Immich Valkey with AOF enabled, require `PING`, `aof_last_write_status:ok` (strip `\r` first; `INFO` uses CRLF), and write access as the actual Valkey process UID to its data bind mount. The Compose healthcheck stays Immich's Redis-compatible `PING` check. Keep internal ports internal. These checks do not replace the owning app's external probe. |
 
 For PostgreSQL, a successful `pg_isready` only proves that the server socket
 accepts connections; it does not supersede a failing Compose healthcheck or
@@ -578,7 +579,7 @@ networking to make a probe succeed without the applicable approval.
      redirects with bounded hops and verify the final destination. Treat an
      authentication response as expected only when confirmed for that app;
      never read credentials or log in implicitly. For user-facing web apps,
-    use one browser visit to that selected route as the primary UI check;
+     use one browser visit to that selected route as the primary UI check;
      do not duplicate it with curl requests made only to scrape a title. Use
      protocol-appropriate checks for non-HTTP services, including AdGuard DNS
      over both configured UDP/TCP and keepalived state. Internal-only
@@ -608,11 +609,11 @@ networking to make a probe succeed without the applicable approval.
      Verify application-specific responses, not only DNS/TLS/status; proxy
      502/503/504 responses fail. A shared VIP cannot prove an individual
      instance serves a route. These checks supplement, not multiply, the
-    selected app endpoint check above. Run these proxied checks only as
-    Caddy's recovery validation, not as a dependency of other app checks
-    during a Caddy rollout.
+     selected app endpoint check above. Run these proxied checks only as
+     Caddy's recovery validation, not as a dependency of other app checks
+     during a Caddy rollout.
    - For each changed/recreated web app, use the built-in browser on its
-    selected route to verify the expected rendered UI or login page and
+     selected route to verify the expected rendered UI or login page and
      capture one non-sensitive screenshot. Visual validation is the primary
      UI assertion; use one request to a separate API/identity endpoint only
      when needed to prove the backend independently. Exercise safe read-only
@@ -621,11 +622,11 @@ networking to make a probe succeed without the applicable approval.
      For apps using Pocket ID OAuth2, including Immich, a handoff to
      `https://id.samskeyti.net` is expected. Capture the app's initial
      sign-in/handoff page promptly; a later identity-provider interaction
-    page is not evidence that the app page failed. In normal proxy mode,
-    use the configured hostname and do not add a duplicate direct-IP probe.
-    In Caddy-rollout backend mode, verify an unauthenticated backend endpoint
-    instead and defer the proxy-dependent UI handoff; a direct-IP callback
-    may be unregistered. Do not continue authentication.
+     page is not evidence that the app page failed. In normal proxy mode,
+     use the configured hostname and do not add a duplicate direct-IP probe.
+     In Caddy-rollout backend mode, verify an unauthenticated backend endpoint
+     instead and defer the proxy-dependent UI handoff; a direct-IP callback
+     may be unregistered. Do not continue authentication.
    - Prefer reusing an already shared browser page or supported background
      navigation that leaves the user's active tab unchanged. If the built-in
      browser tools expose no hidden/background-tab control, tell the user;
@@ -639,10 +640,10 @@ networking to make a probe succeed without the applicable approval.
      to make a check pass. Record the browser endpoint, vantage point, visual
      result, and remaining per-instance or backend gaps. Browser checks do not
      replace container/config validation, DNS probes, or internal dependencies.
-    If the browser cannot reach or validate the expected page, report the
-    gap and stop the rollout rather than declaring the service healthy,
-    except for explicitly deferred proxy-dependent OAuth UI checks in backend
-    mode; report those separately from the verified backend result.
+     If the browser cannot reach or validate the expected page, report the
+     gap and stop the rollout rather than declaring the service healthy,
+     except for explicitly deferred proxy-dependent OAuth UI checks in backend
+     mode; report those separately from the verified backend result.
    - Use bounded connection/request timeouts and certificate verification;
      never bypass TLS or access controls to make a probe pass. Record the
      endpoint, probe vantage point, expected/observed result, and any blocked
@@ -655,9 +656,9 @@ networking to make a probe succeed without the applicable approval.
    validation must pass before the next wave begins. Do not claim full
    success if a target was stopped, unreachable, failed, or skipped.
 5. Report guest ID, owner, role tag, before/after revision, helper result,
-  validation result, selected route and Caddy recovery probe results, and any
-  browser visual-validation results when used, failures, validation gaps,
-  or skipped targets. Record important
+   validation result, selected route and Caddy recovery probe results, and any
+   browser visual-validation results when used, failures, validation gaps,
+   or skipped targets. Record important
    observations in the repo only as authorized; keep secrets and runtime
    status out of `deployments.yaml`. Do not promise automatic rollback of
    mutable image tags, and never reboot as part of this skill.
