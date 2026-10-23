@@ -1,4 +1,8 @@
 #!/bin/bash
+if (return 0 2>/dev/null); then
+	printf 'Run bootstrap with bash; do not source it\n' >&2
+	return 1
+fi
 ## bootstrap PVE Docker LXCs
 
 : 'GLOBAL CONFIG'
@@ -33,12 +37,17 @@ fi
 
 : 'INSTALL PACKAGES'
 sudo apt-get update &&
-	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release fastfetch direnv lrzsz shfmt || exit 1
+	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release direnv lrzsz shfmt || exit 1
 
 # remove the obsolete fastfetch PPA if present
 if grep -Rqs 'zhangsongcui3371/fastfetch' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
-	sudo add-apt-repository --remove ppa:zhangsongcui3371/fastfetch -y || true
+	sudo add-apt-repository --remove ppa:zhangsongcui3371/fastfetch -y || exit 1
 fi
+
+# remove any previously installed PPA build before installing from Ubuntu repositories
+sudo apt-get remove -y fastfetch || exit 1
+sudo apt-get update &&
+	sudo apt-get install -y fastfetch || exit 1
 
 : 'INSTALL DOCKER'
 # add Docker's official GPG key
@@ -158,9 +167,11 @@ fi
 AUTOENV_URL="git@github.com:hyperupcall/autoenv.git"
 for autoenv_user in root dante; do
 	autoenv_dir="$(getent passwd "${autoenv_user}" | cut -d: -f6)/.autoenv"
-	if [[ -d "${autoenv_dir}" ]]; then
+	if user_git "${autoenv_user}" -C "${autoenv_dir}" rev-parse --git-dir >/dev/null 2>&1; then
 		user_git "${autoenv_user}" -C "${autoenv_dir}" remote set-url origin "${AUTOENV_URL}" || exit 1
 		user_git "${autoenv_user}" -C "${autoenv_dir}" pull --ff-only || exit 1
+	elif sudo -u "${autoenv_user}" test -e "${autoenv_dir}"; then
+		printf 'WARNING: Existing Autoenv path is not a Git checkout; leaving it untouched: %s\n' "${autoenv_dir}" >&2
 	else
 		user_git "${autoenv_user}" clone "${AUTOENV_URL}" "${autoenv_dir}" || exit 1
 	fi
