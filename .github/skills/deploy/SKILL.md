@@ -77,6 +77,12 @@ for full functional, health, log, or visual validation.
    preserve it and stop that guest without pulling or cleaning it. Continue
    independent preflight for other targets.
 
+`dpull` uses plain `git pull`, which can create a guest-local merge commit when
+the guest branch is ahead of the published target. A clean worktree is not
+enough: verify that the guest's current `HEAD` is an ancestor of the exact
+published SHA. Stop on any local-ahead or divergent history; do not use `git
+pull` to reconcile guest branches.
+
 ## Networking Order
 
 AdGuard Home and Caddy remain staggered even in lite mode:
@@ -148,7 +154,7 @@ completion; do not rerun an uncertain update without explicit approval.
   the guest, command phase, exit status, and that later guests were skipped.
   Do not retry or roll back automatically.
 - Exception: a recreate failing with `tried to kill container, but did not
-  receive an exit event` can mean the old process is still flushing NFS
+receive an exit event` can mean the old process is still flushing NFS
   writeback (D state in `nfs_wb_all`). Wait for that process to exit, rerun
   `dupull` on the same guest once, and `docker rename` any leftover
   `<hash>_<name>` container back to its service name.
