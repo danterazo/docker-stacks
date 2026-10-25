@@ -75,6 +75,7 @@ services:
   analysis-worker:
     image: ghcr.io/neptunehub/audiomuse-ai:latest-nvidia
     container_name: audiomuse-analysis-worker
+    working_dir: /app
     entrypoint: [/usr/bin/python3]
     command: [-u, -m, taskqueue.worker, --queue, default]
     environment:
