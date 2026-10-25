@@ -18,4 +18,12 @@ alias dcuu="docker compose up -d --remove-orphans"
 alias dcpb="docker compose build --pull"
 
 # system state
-alias bootstrap='cd /docker && { if [[ ${EUID} -eq 0 ]]; then runuser -u dante -- git pull --ff-only; else git pull --ff-only; fi; } && bash -O extglob /docker/bootstrap.sh'
+bootstrap() {
+	cd /docker || return 1
+	if [[ ${EUID} -eq 0 ]]; then
+		runuser -u dante -- git pull --ff-only || return 1
+	else
+		git pull --ff-only || return 1
+	fi
+	bash -O extglob /docker/bootstrap.sh
+}

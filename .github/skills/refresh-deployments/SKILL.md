@@ -80,7 +80,7 @@ whether the guest still belongs there.
   checks run as `dante` without `sudo`, just as on LXCs. Do not carry forward
   historical VM sudo requirements. On permission failure, stop and report;
   do not elevate or change groups, ownership, or socket permissions.
-  This metadata-only workflow never runs the `bootstrap` alias, even when
+  This metadata-only workflow never runs the `bootstrap` helper, even when
   `bootstrap.sh` has changed; that conditional phase belongs to `/deploy`.
 - Use the existing SSH configuration and authentication. Use noninteractive
   connections, a bounded connection timeout, and strict host-key checking.

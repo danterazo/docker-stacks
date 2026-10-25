@@ -120,18 +120,18 @@ log probes in this workflow.
 ## Run
 
 Run `dupull` from `/docker` in a fresh noninteractive Bash session as `dante`.
-`dupull` is a function; `upgrade` is an alias expanded while the functions file
-is sourced, so enable alias expansion and source aliases first:
+`dupull`, `upgrade`, and `bootstrap` are functions. Source their definitions
+explicitly; alias expansion is not required:
 
 ```bash
 set -e
 test "$(id -un)" = dante
 cd /docker
-shopt -s expand_aliases
 source /docker/_common/aliases.sh
+source /docker/_common/utility-aliases.sh
 source /docker/_common/functions.sh
 declare -F dupull >/dev/null
-alias upgrade >/dev/null
+declare -F upgrade >/dev/null
 dupull
 ```
 

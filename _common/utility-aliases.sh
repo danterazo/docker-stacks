@@ -3,7 +3,6 @@
 
 alias dwatch="watch -d -n 1"
 alias cff="clear && fastfetch"
-unalias upgrade 2>/dev/null || true
 upgrade() {
 	sudo apt update && sudo apt dist-upgrade -y && sudo apt clean && sudo apt autoremove -y --purge
 }

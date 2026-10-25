@@ -80,7 +80,7 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
   `dpull` from `_common/functions.sh`, then validate startup. Stopping first
   forces a clean recreate, so validation proves the stacks start from the
   new definitions rather than surviving as old containers.
-- Use `dpull`, not `dupull`. `dupull` only adds the `upgrade` alias (APT
+- Use `dpull`, not `dupull`. `dupull` only adds the `upgrade` function (APT
   dist-upgrade, cache clean, `autoremove --purge`), which is unrelated to
   deploying repo changes. Run `upgrade`/`dupull` only when the user
   explicitly asks for OS upgrades, with separate approval for package
@@ -182,18 +182,18 @@ refresh again before continuing. Do not repeat full discovery unnecessarily.
 
 For each selected guest, compare its recorded predeploy revision with the
 intended published revision. If that incoming diff includes `bootstrap.sh`,
-run the guest's `bootstrap` alias before `dcd -v`, `dpull`, or any other
+run the guest's `bootstrap` helper before `dcd -v`, `dpull`, or any other
 deployment mutation. Read-only preflight and required approvals come first.
 Ignore unpublished local bootstrap edits; they neither trigger bootstrap nor
 block deploying the selected published revision. Inspect and run that
 revision's script when required by the guest's incoming published diff.
 Do not expand the selected guest scope.
 
-1. Inspect the deployed alias and the incoming published script before
-   execution. The current alias pulls Git as `dante`, then sources
-   `/docker/bootstrap.sh` in the invoking shell. Its `git pull || true`
-   masks pull failures: explicitly fast-forward as `dante` and verify the
-   intended revision before invoking the alias; check HEAD again afterward.
+1. Inspect the deployed helper and the incoming published script before
+   execution. Explicitly fast-forward as `dante` and verify the intended
+   revision before loading and invoking the reviewed `bootstrap` function;
+   check HEAD again afterward. The function stops on pull failure and runs
+   `/docker/bootstrap.sh` in a child Bash process, never by sourcing it.
    Preserve the old Compose definitions and active-project snapshot before
    this pull. If changed definitions cannot safely tear down the old projects,
    block mutation for that guest, record the required targeted teardown, and
@@ -216,17 +216,18 @@ Do not expand the selected guest scope.
    tracked path as `dante`, stop and inspect that exact repository path; do not
    broaden the repair to app data. Never recursively chown application data
    merely to clear a health failure.
-3. The current alias uses `runuser`, requiring a guest administrative shell;
-   the standing bootstrap approval includes that shell through the existing
+3. Bootstrap requires a guest administrative shell; its function uses
+   `runuser` for Git when invoked as root. The standing bootstrap approval
+   includes that shell through the existing
    approved access method, not new remote access or trust configuration.
-   It cannot simply be invoked as unprivileged `dante`. Inspect
-   and load the deployed alias explicitly in noninteractive Bash, enabling
-   alias expansion before parsing its invocation (for example, invoke the
-   reviewed alias using `eval 'bootstrap'` after sourcing its definition).
+   It cannot simply be invoked as unprivileged `dante`. After the verified
+   fast-forward, inspect and source `/docker/_common/aliases.sh` explicitly
+   in a fresh noninteractive Bash shell, then call the `bootstrap` function.
+   Alias expansion is not required.
    Set `HOME=/root` in that administrative shell before sourcing or invoking
-   the alias. `pct exec` may otherwise provide `/` as `HOME`, causing the
+   the helper. `pct exec` may otherwise provide `/` as `HOME`, causing the
    script's `$HOME/.autoenv` setup to create `/.autoenv`.
-   The alias pulls Git with `--ff-only`, then runs
+   The function pulls Git with `--ff-only`, then runs
    `bash -O extglob /docker/bootstrap.sh` in a child shell. Never source
    `bootstrap.sh`; its source guard intentionally rejects that invocation.
 4. Check output from every bootstrap phase, not only its final status;

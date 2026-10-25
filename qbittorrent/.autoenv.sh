@@ -1,5 +1,4 @@
 # sourced into the interactive shell by autoenv: no exit or set -e here
-unalias loc loc2 2>/dev/null
 
 # last public ip/location reported in gluetun's logs
 loc() (
