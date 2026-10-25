@@ -37,17 +37,7 @@ fi
 
 : 'INSTALL PACKAGES'
 sudo apt-get update &&
-	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release direnv lrzsz shfmt || exit 1
-
-# remove the obsolete fastfetch PPA if present
-if grep -Rqs 'zhangsongcui3371/fastfetch' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
-	sudo add-apt-repository --remove ppa:zhangsongcui3371/fastfetch -y || exit 1
-fi
-
-# remove any previously installed PPA build before installing from Ubuntu repositories
-sudo apt-get remove -y fastfetch || exit 1
-sudo apt-get update &&
-	sudo apt-get install -y fastfetch || exit 1
+	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release direnv lrzsz shfmt fastfetch || exit 1
 
 : 'INSTALL DOCKER'
 # add Docker's official GPG key
