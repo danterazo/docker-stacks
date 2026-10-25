@@ -6,6 +6,10 @@ EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './n
 # format everything
 format: fix-python fix-shell fix-javascript fix-caddy lint-compose-spacing lint-docker
 
+.PHONY: test-shell-helpers
+test-shell-helpers:
+	bash scripts/test-shell-helpers.sh
+
 # alias
 fix: format
 

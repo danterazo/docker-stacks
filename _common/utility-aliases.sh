@@ -4,7 +4,9 @@
 : 'General Utilities'
 alias dwatch="watch -d -n 1"
 alias cff="clear && fastfetch"
-alias upgrade="sudo apt update && sudo apt dist-upgrade -y && sudo apt clean && sudo apt autoremove -y --purge"
+upgrade() {
+	sudo apt update && sudo apt dist-upgrade -y && sudo apt clean && sudo apt autoremove -y --purge
+}
 alias sn="sudo nano"
 alias sc="sudo cat"
 alias rm-empty-dirs="sudo find . -type d -empty -print -delete"
