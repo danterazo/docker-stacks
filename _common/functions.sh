@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# source common aliases
 source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/utility-aliases.sh" || return 1
 
 # pull Git and Docker registry images, then rebuild and recreate stacks
