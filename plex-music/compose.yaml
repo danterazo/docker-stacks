@@ -23,7 +23,6 @@ services:
     environment:
       PUID: 1000
       PGID: 1000
-    cpus: 1
     env_file: .env
     volumes:
       - ./data/plex/:/plex-data/:ro

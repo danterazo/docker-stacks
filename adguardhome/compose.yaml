@@ -3,7 +3,6 @@ services:
     image: adguard/adguardhome:latest
     container_name: adguardhome
     restart: always
-    cpus: 1
     env_file: common.env # common for all instances
     volumes:
       - ./state/:/opt/adguardhome/work/:rw
