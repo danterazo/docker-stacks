@@ -12,8 +12,8 @@ services:
     networks:
       - kuma-net
 
-  luxos-records:
-    container_name: luxos-records
+  mining-records:
+    container_name: mining-records
     image: louislam/uptime-kuma:2
     user: 1000:1000
     restart: unless-stopped
