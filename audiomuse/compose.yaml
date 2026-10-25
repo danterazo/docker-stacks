@@ -72,6 +72,34 @@ services:
               capabilities:
                 - gpu
 
+  analysis-worker:
+    image: ghcr.io/neptunehub/audiomuse-ai:latest-nvidia
+    container_name: audiomuse-analysis-worker
+    entrypoint: [/usr/bin/python3]
+    command: [-u, -m, taskqueue.worker, --queue, default]
+    environment:
+      SERVICE_TYPE: worker
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./data/worker-plugins/:/app/plugin/installed/:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - audiomuse-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids:
+                - "0"
+              capabilities:
+                - gpu
+
 networks:
   audiomuse-net:
     name: audiomuse-net
