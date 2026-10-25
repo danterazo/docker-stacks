@@ -106,6 +106,7 @@ if [ -x /usr/bin/dircolors ]; then
 fi
 
 source /docker/_common/utility-aliases.sh
+source /docker/_common/docker-aliases.sh
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like

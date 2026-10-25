@@ -17,6 +17,8 @@ alias dvol="docker volume ls"
 alias dcuu="docker compose up -d --remove-orphans"
 alias dcpb="docker compose build --pull"
 
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/docker-aliases.sh"
+
 # system state
 bootstrap() {
 	cd /docker || return 1
