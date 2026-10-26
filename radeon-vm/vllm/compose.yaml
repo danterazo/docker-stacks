@@ -12,7 +12,7 @@ services:
     env_file: .env
     shm_size: 4gb
     ports:
-      - 8000:8000/tcp
+      - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${VLLM_PORT:-8000}:8000/tcp
     # Match tensor parallelism to the attached and validated V620 count.
     devices:
       - /dev/kfd:/dev/kfd

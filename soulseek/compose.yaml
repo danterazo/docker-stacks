@@ -33,7 +33,7 @@ services:
       net.ipv6.conf.all.disable_ipv6: "0"
       net.ipv6.conf.default.disable_ipv6: "0"
     ports:
-      - 0.0.0.0:5030:5030/tcp # soulseek web UI
+      - 192.168.30.117:5030:5030/tcp # soulseek web UI
     env_file:
       - .env
       - .secrets

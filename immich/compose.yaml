@@ -17,7 +17,7 @@ services:
       - .env
       - .secrets
     ports:
-      - 2283:2283/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.101}:2283:2283/tcp
     depends_on:
       immich-db:
         condition: service_healthy
@@ -121,7 +121,7 @@ services:
       - .env
       - .secrets
     ports:
-      - 5000:5000/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.101}:5000:5000/tcp
     networks:
       - immich-net
     volumes:

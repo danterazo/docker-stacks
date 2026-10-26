@@ -24,7 +24,7 @@ services:
     environment:
       SERVICE_TYPE: flask
     ports:
-      - 8000:8000/tcp
+      - 192.168.30.101:8000:8000/tcp
     env_file:
       - .env
       - .secrets

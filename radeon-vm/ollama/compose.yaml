@@ -10,7 +10,7 @@ services:
     init: true
     env_file: .env
     ports:
-      - 11434:11434/tcp
+      - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${OLLAMA_PORT:-11434}:11434/tcp
     # Add compose.gpu.yaml only after guest GPU passthrough is validated.
     volumes:
       - ./data/:/state/:rw

@@ -5,7 +5,7 @@ services:
     user: 1000:1000
     restart: unless-stopped
     ports:
-      - 3001:3001/tcp
+      - 192.168.30.115:3001:3001/tcp
     env_file: .env
     volumes:
       - ./data/:/app/data/:rw

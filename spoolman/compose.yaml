@@ -7,7 +7,7 @@ services:
       PGID: 1000
     restart: unless-stopped
     ports:
-      - 7912:8000/tcp
+      - 192.168.30.104:7912:8000/tcp
     env_file: .env
     volumes:
       - ./data/:/home/app/.local/share/spoolman:rw

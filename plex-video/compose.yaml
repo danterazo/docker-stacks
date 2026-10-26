@@ -28,7 +28,7 @@ services:
       - ./data/plex/:/plex-data/:ro
       - ./data/tautulli/:/config/:rw
     ports:
-      - 8181:8181/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.101}:8181:8181/tcp
     restart: unless-stopped
     depends_on:
       - plex-video

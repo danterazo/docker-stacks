@@ -8,7 +8,7 @@ services:
       - .env
       - .secrets
     ports:
-      - 1411:1411/tcp
+      - 192.168.30.100:1411:1411/tcp
     volumes:
       - ./data/:/app/data/:rw
     healthcheck:
