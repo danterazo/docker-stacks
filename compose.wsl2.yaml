@@ -49,7 +49,7 @@ services:
     container_name: audiomuse-worker-local
     hostname: ovedur-audiomuse
     environment:
-      POSTGRES_HOST: 100.100.30.101
+      POSTGRES_HOST: 192.168.30.101
     depends_on: !reset {}
     volumes: !override
       - ./audiomuse/data/local-worker-plugins/:/app/plugin/installed/:rw
