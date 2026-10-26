@@ -1,0 +1,77 @@
+name: paperless-ngx
+
+services:
+  paperless-ngx:
+    container_name: paperless-ngx
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: always
+    env_file:
+      - .env
+      - .secrets
+    environment:
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBENGINE: postgresql
+    ports:
+      - 192.168.30.101:8001:8000/tcp
+    volumes:
+      - ./data/paperless/:/usr/src/paperless/data/:rw
+      - ./data/media/:/usr/src/paperless/media/:rw
+      - ./data/export/:/usr/src/paperless/export/:rw
+      - ./data/consume/:/usr/src/paperless/consume/:rw
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+        restart: true
+      paperless-redis:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8000/]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5m
+    networks:
+      - paperless-net
+
+  paperless-db:
+    container_name: paperless-db
+    image: docker.io/library/postgres:18
+    restart: always
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./data/postgres/:/var/lib/postgresql/:rw
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - paperless-net
+
+  paperless-redis:
+    container_name: paperless-redis
+    image: docker.io/valkey/valkey:9-alpine
+    restart: always
+    command: [valkey-server, --appendonly, "yes"]
+    volumes:
+      - ./data/redis/:/data/:rw
+    healthcheck:
+      test: [CMD, valkey-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paperless-net
+
+networks:
+  paperless-net:
+    name: paperless-net
+
+x-dockge:
+  urls:
+    - https://paperless.samskeyti.net/

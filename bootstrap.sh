@@ -17,7 +17,7 @@ sudo do-release-upgrade -f DistUpgradeViewNonInteractive
 
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
-	["nvidia-vm"]='immich plex-video audiomuse'
+	["nvidia-vm"]='immich plex-video audiomuse paperless-ngx'
 )
 
 : 'SYSTEM CONFIG'
