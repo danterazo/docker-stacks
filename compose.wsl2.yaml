@@ -1,0 +1,66 @@
+name: desktop-workers
+
+services:
+  immich-ml:
+    extends:
+      file: immich/compose.yaml
+      service: immich-ml
+    container_name: immich-ml
+    environment:
+      TZ: America/Chicago
+      MACHINE_LEARNING_WORKERS: 3
+      MACHINE_LEARNING_WORKER_TIMEOUT: 120
+    volumes: !override
+      - immich-models:/cache/:rw
+    networks: !override
+      - default
+    ports:
+      - 3003:3003/tcp
+    command: !override
+      - python
+      - -m
+      - gunicorn
+      - immich_ml.main:app
+      - -k
+      - immich_ml.config.CustomUvicornWorker
+      - -c
+      - immich_ml/gunicorn_conf.py
+      - -b
+      - 0.0.0.0:3003
+      - --log-config-json
+      - immich_ml/log_conf.json
+      - --workers
+      - "1"
+      - --timeout
+      - "300"
+      - --keep-alive
+      - "2"
+      - --graceful-timeout
+      - "10"
+      - --max-requests
+      - "300"
+      - --max-requests-jitter
+      - "10"
+
+  audiomuse-worker:
+    extends:
+      file: audiomuse/compose.yaml
+      service: audiomuse-worker
+    container_name: audiomuse-worker-local
+    hostname: ovedur-audiomuse
+    environment:
+      POSTGRES_HOST: 100.100.30.101
+    depends_on: !reset {}
+    volumes: !override
+      - ./audiomuse/data/local-worker-plugins/:/app/plugin/installed/:rw
+    networks: !override
+      - default
+
+volumes:
+  immich-models:
+    name: immich_remote_ml_models_nfs
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.20.42,hard,rw,noatime,nfsvers=4.2,nconnect=8
+      device: :/tank/models/immich/

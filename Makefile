@@ -1,9 +1,9 @@
 SHELL := /bin/bash
 EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './node_modules' -o -path './.vscode' -o -path './.undeployed' -o -path './tabby/source' \) -prune -o
 
-WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.wsl2.yaml"
 
-.PHONY: wsl2
+# deploy local copies of certain apps' workers, s.t. the desktop's GPU can accelerate server workloads
+WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.wsl2.yaml"
 wsl2:
 	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2 is for WSL2, not server deployment.' >&2; exit 1; }
 	@[[ -f audiomuse/.secrets && -f immich/.secrets ]] || { echo 'Sync audiomuse/.secrets and immich/.secrets from the server before make wsl2.' >&2; exit 1; }
