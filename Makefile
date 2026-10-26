@@ -4,11 +4,16 @@ EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './n
 
 # deploy local copies of certain apps' workers, s.t. the desktop's GPU can accelerate server workloads
 WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.wsl2.yaml"
+export WSL_NVIDIA_DRIVER_DIR ?= $(shell find /usr/lib/wsl/drivers -maxdepth 2 -name libnvidia-ptxjitcompiler.so.1 -printf '%h\n' 2>/dev/null)
+WSL2_SERVICES ?= immich-ml audiomuse-worker-01 audiomuse-worker-02 audiomuse-worker-03
+
+.PHONY: wsl2
 wsl2:
 	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2 is for WSL2, not server deployment.' >&2; exit 1; }
 	@[[ -f audiomuse/.secrets && -f immich/.secrets ]] || { echo 'Sync audiomuse/.secrets and immich/.secrets from the server before make wsl2.' >&2; exit 1; }
+	@[[ -f "$(WSL_NVIDIA_DRIVER_DIR)/libnvidia-ptxjitcompiler.so.1" ]] || { echo 'Could not identify one NVIDIA WSL driver directory; set WSL_NVIDIA_DRIVER_DIR explicitly.' >&2; exit 1; }
 	$(WSL2_COMPOSE) config --quiet
-	$(WSL2_COMPOSE) up -d --no-deps immich-ml audiomuse-worker
+	$(WSL2_COMPOSE) up -d --no-deps $(WSL2_SERVICES)
 
 .PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker lint-docker-inner fix-caddy fix-caddy-inner deps clean
 
