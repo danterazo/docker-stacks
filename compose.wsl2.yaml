@@ -5,7 +5,7 @@ services:
     extends:
       file: immich/compose.yaml
       service: immich-ml
-    container_name: immich-ml
+    container_name: immich-ml-worker
     environment:
       TZ: America/Chicago
       MACHINE_LEARNING_WORKERS: 3
@@ -46,7 +46,7 @@ services:
     extends:
       file: audiomuse/compose.yaml
       service: audiomuse-worker
-    container_name: audiomuse-worker-local-01
+    container_name: audiomuse-worker-01
     hostname: ovedur-worker-01
     environment:
       POSTGRES_HOST: 192.168.30.101
@@ -61,7 +61,7 @@ services:
     extends:
       file: audiomuse/compose.yaml
       service: audiomuse-worker
-    container_name: audiomuse-worker-local-02
+    container_name: audiomuse-worker-02
     hostname: ovedur-worker-02
     environment:
       POSTGRES_HOST: 192.168.30.101
@@ -76,7 +76,7 @@ services:
     extends:
       file: audiomuse/compose.yaml
       service: audiomuse-worker
-    container_name: audiomuse-worker-local-03
+    container_name: audiomuse-worker-03
     hostname: ovedur-worker-03
     environment:
       POSTGRES_HOST: 192.168.30.101
