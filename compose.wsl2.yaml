@@ -42,11 +42,39 @@ services:
       - --max-requests-jitter
       - "10"
 
-  audiomuse-worker:
+  audiomuse-worker-01:
     extends:
       file: audiomuse/compose.yaml
       service: audiomuse-worker
-    container_name: audiomuse-worker-local
+    container_name: audiomuse-worker-local-01
+    hostname: ovedur-audiomuse
+    environment:
+      POSTGRES_HOST: 192.168.30.101
+    depends_on: !reset {}
+    volumes: !override
+      - ./audiomuse/data/local-worker-plugins/:/app/plugin/installed/:rw
+    networks: !override
+      - default
+
+  audiomuse-worker-02:
+    extends:
+      file: audiomuse/compose.yaml
+      service: audiomuse-worker
+    container_name: audiomuse-worker-local-02
+    hostname: ovedur-audiomuse
+    environment:
+      POSTGRES_HOST: 192.168.30.101
+    depends_on: !reset {}
+    volumes: !override
+      - ./audiomuse/data/local-worker-plugins/:/app/plugin/installed/:rw
+    networks: !override
+      - default
+
+  audiomuse-worker-03:
+    extends:
+      file: audiomuse/compose.yaml
+      service: audiomuse-worker
+    container_name: audiomuse-worker-local-03
     hostname: ovedur-audiomuse
     environment:
       POSTGRES_HOST: 192.168.30.101
