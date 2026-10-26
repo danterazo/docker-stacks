@@ -1,0 +1,13 @@
+{
+    "python.analysis.extraPaths": [
+        "uptime-kuma"
+    ],
+    "yaml.customTags": [
+        "!override scalar",
+        "!override sequence",
+        "!override mapping",
+        "!reset scalar",
+        "!reset sequence",
+        "!reset mapping"
+    ]
+}
