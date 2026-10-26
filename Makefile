@@ -1,6 +1,19 @@
 SHELL := /bin/bash
 EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './node_modules' -o -path './.vscode' -o -path './.undeployed' -o -path './tabby/source' \) -prune -o
 
+LOCAL_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.local.yaml"
+
+.PHONY: local local-check
+local-check:
+	$(LOCAL_COMPOSE) config --no-env-resolution --quiet
+
+local: local-check
+	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make local is for WSL2, not server deployment.' >&2; exit 1; }
+	@[[ -f audiomuse/.env.local && -f audiomuse/local.secrets ]] || { echo 'Configure audiomuse/.env.local and audiomuse/local.secrets using audiomuse/reference/local.*.example first.' >&2; exit 1; }
+	@if docker container inspect immich-ml >/dev/null 2>&1; then echo 'The existing immich-ml container must be migrated before make local can publish port 3003. No containers were changed.' >&2; exit 1; fi
+	$(LOCAL_COMPOSE) config --quiet
+	$(LOCAL_COMPOSE) up -d --no-deps immich-ml audiomuse-worker
+
 .PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker lint-docker-inner fix-caddy fix-caddy-inner deps clean
 
 # format everything
