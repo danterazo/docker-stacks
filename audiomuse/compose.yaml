@@ -49,6 +49,7 @@ services:
   audiomuse-worker:
     image: ghcr.io/neptunehub/audiomuse-ai:latest-nvidia
     container_name: audiomuse-worker
+    hostname: kex-worker
     environment:
       SERVICE_TYPE: worker
     env_file:
