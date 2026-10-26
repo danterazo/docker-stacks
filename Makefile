@@ -7,7 +7,6 @@ WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/com
 wsl2:
 	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2 is for WSL2, not server deployment.' >&2; exit 1; }
 	@[[ -f audiomuse/.env.local && -f audiomuse/local.secrets ]] || { echo 'Configure audiomuse/.env.local and audiomuse/local.secrets using audiomuse/reference/local.*.example first.' >&2; exit 1; }
-	@if docker container inspect immich-ml >/dev/null 2>&1; then echo 'The existing immich-ml container must be migrated before make wsl2 can publish port 3003. No containers were changed.' >&2; exit 1; fi
 	$(WSL2_COMPOSE) config --quiet
 	$(WSL2_COMPOSE) up -d --no-deps immich-ml audiomuse-worker
 
