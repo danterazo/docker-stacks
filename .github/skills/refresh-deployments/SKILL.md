@@ -28,10 +28,13 @@ whether the guest still belongs there.
   genuinely additional access or scope. Refreshing cluster-wide metadata does
   not authorize deploying additional guests or probing unrelated workloads.
 - Complete Discovery, Merge Rules and Metadata Format, and Update and Validate
-  below. Save and validate `deployments.yaml`, including its America/Chicago
-  timestamp, even when guest placements have not changed. Preserve unrelated
-  edits and comments. When this refresh is part of a deployment, summarize the
-  map changes and commit only `deployments.yaml` in its own commit before
+  below. Compare discovered metadata with `deployments.yaml` before editing.
+  If no metadata changed, leave the file and both timestamp fields untouched,
+  report successful discovery with no drift, and do not create a commit.
+  Otherwise update both America/Chicago timestamp fields and validate the map.
+  Preserve unrelated edits and comments. When this refresh is part of a
+  deployment, summarize the substantive map changes and commit only
+  `deployments.yaml` in its own commit before
   publishing deployment commits or operating on guests. Use a concise message
   describing the changes, or `Persist cluster state as of YYYY-MM-DD @ h:mmam CDT`
   using the map's America/Chicago date and time; use `CST` when appropriate for
@@ -321,7 +324,8 @@ refresh after the operation completes and before handoff or remote validation.
 Triggers include guest creation/cloning, deletion, migration, renaming or ID
 changes, address changes, and pool/tag/node changes. Recheck live metadata after
 storage changes too, without adding disk identifiers to this metadata-only map.
-Update and validate both Central-time timestamp fields even if placements did
-not change. Keep an incomplete refresh in the pending ledger and do not claim
+Only update both Central-time timestamp fields when map metadata changes;
+otherwise validate the existing map without modifying or committing it.
+Keep an incomplete refresh in TickTick and do not claim
 the map is current. Prefer on-demand checks; a weekly read-only drift report is
 optional and requires separate approval to schedule.

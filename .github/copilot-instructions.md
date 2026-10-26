@@ -57,7 +57,9 @@
   If refresh is incomplete or validation fails, stop deployment rather than
   using the stale map. A deployment request authorizes this local metadata
   refresh and a separate commit containing only `deployments.yaml` when the
-  refresh changes it. Make that commit before publishing deployment commits or
+  refresh changes substantive metadata. If discovery finds no drift, leave
+  both timestamp fields and the file untouched and skip the metadata commit.
+  Make a required metadata commit before publishing deployment commits or
   operating on guests; use the commit-message time format defined in
   `.github/skills/refresh-deployments/SKILL.md` and do not combine it with
   application-code changes. This does not expand the requested deployment scope.
@@ -250,8 +252,9 @@
   or subsequent deployment. This includes guest creation/cloning, deletion,
   migration, hostname/ID/address changes, and pool/tag/node changes. Revalidate
   live state after storage changes too; keep disk names and runtime status out
-  of the metadata-only map. Update both Central-time timestamp fields, validate
-  the result, and keep metadata commits separate from application changes.
+  of the metadata-only map. Update both Central-time timestamp fields only
+  when metadata changes; otherwise leave the file untouched. Validate the
+  result and keep required metadata commits separate from application changes.
   Preserve intended mappings and show drift for review rather than silently
   replacing them. A failed refresh remains pending, not complete. Do not
   schedule background discovery without approval.
