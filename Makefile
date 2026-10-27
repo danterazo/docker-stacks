@@ -12,7 +12,7 @@ wsl2:
 	@[[ -f audiomuse/.secrets && -f immich/.secrets ]] || { echo 'Sync audiomuse/.secrets and immich/.secrets from the server before make wsl2.' >&2; exit 1; }
 	@[[ -f "$(WSL_NVIDIA_DRIVER_DIR)/libnvidia-ptxjitcompiler.so.1" ]] || { echo 'Could not identify one NVIDIA WSL driver directory; set WSL_NVIDIA_DRIVER_DIR explicitly.' >&2; exit 1; }
 	$(WSL2_COMPOSE) config --quiet
-	$(WSL2_COMPOSE) up -d
+	$(WSL2_COMPOSE) up -d $(WSL2_SERVICES)
 
 .PHONY: logs
 logs:
