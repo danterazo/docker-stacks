@@ -6,8 +6,6 @@ services:
     runtime: nvidia
     ports:
       - 32400:32400/tcp
-    environment:
-      LD_LIBRARY_PATH: /usr/local/nvidia/lib64
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
