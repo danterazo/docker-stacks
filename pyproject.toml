@@ -5,7 +5,10 @@
     authors = [{name = "Dante Razo", email = "github.d2brf@simplelogin.fr"}]
     readme = "README.md"
     requires-python = ">=3.15.2"
-    dependencies = ["ruff"]
+    dependencies = [
+    "pyyaml>=6.0.3",
+    "ruff",
+]
 
 [tool.ruff]
     line-length = 150
