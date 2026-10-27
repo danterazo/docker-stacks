@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-26"
-  timestamp: "9:29:03 PM"
+  timestamp: "9:44:54 PM"
 
 cluster:
   entrypoint:
@@ -97,6 +97,13 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker, nas]
+  121:
+    hostname: audiomuse
+    node: kex
+    address: 192.168.30.121
+    pool: prod
+    type: lxc
+    tags: [docker, gpu]
   200:
     hostname: adguardhome
     node: cerulean
