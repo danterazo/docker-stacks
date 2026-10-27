@@ -38,7 +38,7 @@ fix-javascript:
 		| xargs -0 -r prettier --write
 
 lint-compose-spacing:
-	python scripts/lint-compose-spacing.py
+	uv run python scripts/lint-compose-spacing.py
 
 lint-docker:
 	newgrp docker -c '$(MAKE) --no-print-directory lint-docker-inner'
@@ -58,17 +58,16 @@ fix-caddy-inner:
 			caddy:alpine caddy fmt --overwrite "/etc/caddy/{}"
 
 fix-python:
-	ruff check --fix .
-	ruff format .
+	uv run ruff check --fix .
+	uv run ruff format .
 
 fix-shell:
 	find . $(EXCLUDES) -type f \( -name '*.sh' -o -name '*.bash' -o -name '.bashrc' -o -name '.profile' \) -print0 \
 		| xargs -0 -r shfmt -w -i 0
 
 deps:
-	poetry lock
-	poetry update
-	poetry install
+	uv lock --upgrade
+	uv sync --locked
 
 clean:
 	find . -type f ! -path './.git/*' \
