@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-26"
-  timestamp: "11:09:15 PM"
+  timestamp: "11:26:30 PM"
 
 cluster:
   entrypoint:
@@ -26,7 +26,7 @@ docker_guests:
     address: 192.168.30.101
     pool: prod
     type: qemu
-    tags: [docker, gpu, nas]
+    tags: [deprecated, docker, gpu, nas]
   102:
     hostname: immich
     node: kex
