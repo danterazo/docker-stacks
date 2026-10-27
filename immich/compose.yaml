@@ -10,14 +10,14 @@ services:
     runtime: nvidia
     # cpus: 8
     volumes:
-      - data_virtiofs:/data/:rw
-      - photography_virtiofs:/external/photography/:rw
+      - /tank/media/photos/immich/:/data/:rw
+      - /tank/media/photos/photography/:/external/photography/:rw
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - .env
       - .secrets
     ports:
-      - ${LAN_BIND_ADDRESS:-192.168.30.101}:2283:2283/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.102}:2283:2283/tcp
     depends_on:
       immich-db:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
     # cpus: 8
     volumes:
       - /dev/bus/usb:/dev/bus/usb
-      - models_virtiofs:/cache/:rw
+      - /tank/models/immich/:/cache/:rw
       - /etc/group:/etc/group:ro
       - /etc/passwd:/etc/passwd:ro
     env_file:
@@ -121,41 +121,16 @@ services:
       - .env
       - .secrets
     ports:
-      - ${LAN_BIND_ADDRESS:-192.168.30.101}:5000:5000/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.102}:5000:5000/tcp
     networks:
       - immich-net
     volumes:
       - ./data/selfie-timelapse/config/:/app/config:rw
-      - selfies_virtiofs:/app/output:rw
+      - /tank/media/photos/related/immich-selfie-timelapse/:/app/output:rw
 
 networks:
   immich-net:
     name: immich-net
-
-volumes:
-  data_virtiofs: # Proxmox dir mapping immich-data -> /tank/media/photos/immich (VM 101 virtiofs0)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: immich-data
-
-  photography_virtiofs: # immich-photography -> /tank/media/photos/photography (virtiofs1)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: immich-photography
-
-  models_virtiofs: # immich-models -> /tank/models/immich (virtiofs2)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: immich-models
-
-  selfies_virtiofs: # immich-selfies -> /tank/media/photos/related/immich-selfie-timelapse (virtiofs3)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: immich-selfies
 
 x-dockge:
   urls:
