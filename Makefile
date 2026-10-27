@@ -14,6 +14,10 @@ wsl2:
 	$(WSL2_COMPOSE) config --quiet
 	$(WSL2_COMPOSE) up -d
 
+.PHONY: logs
+logs:
+	$(WSL2_COMPOSE) logs -f $(LOGS_ARGS)
+
 .PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker lint-docker-inner fix-caddy fix-caddy-inner deps clean
 
 # format everything
