@@ -9,8 +9,8 @@ services:
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
-      - backups_virtiofs:/backups/:rw
-      - videos_virtiofs:/media/videos/:rw
+      - /tank/backups/apps/plex-video/:/backups/:rw
+      - /tank/media/videos/:/media/videos/:rw
     tmpfs:
       - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
     networks:
@@ -28,7 +28,7 @@ services:
       - ./data/plex/:/plex-data/:ro
       - ./data/tautulli/:/config/:rw
     ports:
-      - ${LAN_BIND_ADDRESS:-192.168.30.101}:8181:8181/tcp
+      - ${LAN_BIND_ADDRESS:-192.168.30.108}:8181:8181/tcp
     restart: unless-stopped
     depends_on:
       - plex-video
@@ -38,19 +38,6 @@ services:
 networks:
   plex-video-net:
     name: plex-video-net
-
-volumes:
-  videos_virtiofs: # Proxmox dir mapping plex-videos -> /tank/media/videos (VM 101 virtiofs4)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: plex-videos
-
-  backups_virtiofs: # plex-video-backups -> /tank/backups/apps/plex-video (virtiofs5)
-    driver: local
-    driver_opts:
-      type: virtiofs
-      device: plex-video-backups
 
 x-dockge:
   urls:
