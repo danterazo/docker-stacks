@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-26"
-  timestamp: "9:44:54 PM"
+  timestamp: "10:03:05 PM"
 
 cluster:
   entrypoint:
@@ -31,7 +31,7 @@ docker_guests:
     hostname: immich
     node: kex
     address: 192.168.30.102
-    pool: dev
+    pool: prod
     type: lxc
     tags: [docker, gpu, nas]
   103:
@@ -59,7 +59,7 @@ docker_guests:
     hostname: plex-video
     node: kex
     address: 192.168.30.108
-    pool: dev
+    pool: prod
     type: lxc
     tags: [docker, gpu, nas]
   109:
