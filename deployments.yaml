@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-26"
-  timestamp: "10:03:05 PM"
+  timestamp: "10:45:59 PM"
 
 cluster:
   entrypoint:
@@ -68,7 +68,7 @@ docker_guests:
     address: 192.168.30.109
     pool: prod
     type: lxc
-    tags: [docker]
+    tags: [docker, nas]
   115:
     hostname: uptime-kuma
     node: cerulean
@@ -103,7 +103,7 @@ docker_guests:
     address: 192.168.30.121
     pool: prod
     type: lxc
-    tags: [docker, gpu]
+    tags: [docker, gpu, nas]
   200:
     hostname: adguardhome
     node: cerulean
