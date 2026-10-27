@@ -3,7 +3,7 @@ services:
     image: postgres:15
     container_name: audiomuse-postgres
     ports:
-      - 192.168.30.101:5432:5432/tcp
+      - 192.168.30.121:5432:5432/tcp
     env_file:
       - .env
       - .secrets
@@ -24,7 +24,7 @@ services:
     environment:
       SERVICE_TYPE: flask
     ports:
-      - 192.168.30.101:8000:8000/tcp
+      - 192.168.30.121:8000:8000/tcp
     env_file:
       - .env
       - .secrets

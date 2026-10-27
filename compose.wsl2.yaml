@@ -49,7 +49,7 @@ services:
     container_name: audiomuse-worker-01
     hostname: ovedur-worker-01
     environment:
-      POSTGRES_HOST: 192.168.30.101
+      POSTGRES_HOST: 192.168.30.121
       LD_LIBRARY_PATH: ${WSL_NVIDIA_DRIVER_DIR:?Run make wsl2 to resolve the NVIDIA driver directory}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
     depends_on: !reset {}
     volumes: !override
@@ -64,7 +64,7 @@ services:
     container_name: audiomuse-worker-02
     hostname: ovedur-worker-02
     environment:
-      POSTGRES_HOST: 192.168.30.101
+      POSTGRES_HOST: 192.168.30.121
       LD_LIBRARY_PATH: ${WSL_NVIDIA_DRIVER_DIR:?Run make wsl2 to resolve the NVIDIA driver directory}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
     depends_on: !reset {}
     volumes: !override
@@ -79,7 +79,7 @@ services:
     container_name: audiomuse-worker-03
     hostname: ovedur-worker-03
     environment:
-      POSTGRES_HOST: 192.168.30.101
+      POSTGRES_HOST: 192.168.30.121
       LD_LIBRARY_PATH: ${WSL_NVIDIA_DRIVER_DIR:?Run make wsl2 to resolve the NVIDIA driver directory}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
     depends_on: !reset {}
     volumes: !override
@@ -95,7 +95,7 @@ services:
     container_name: audiomuse-worker-04
     hostname: ovedur-worker-04
     environment:
-      POSTGRES_HOST: 192.168.30.101
+      POSTGRES_HOST: 192.168.30.121
       LD_LIBRARY_PATH: ${WSL_NVIDIA_DRIVER_DIR:?Run make wsl2 to resolve the NVIDIA driver directory}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
     depends_on: !reset {}
     volumes: !override
