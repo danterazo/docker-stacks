@@ -5,14 +5,18 @@ EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './n
 # deploy local copies of certain apps' workers, s.t. the desktop's GPU can accelerate server workloads
 WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.wsl2.yaml"
 
-.PHONY: wsl2
-wsl2 logs: export WSL_NVIDIA_DRIVER_DIR ?= $(shell find /usr/lib/wsl/drivers -maxdepth 2 -name libnvidia-ptxjitcompiler.so.1 -printf '%h\n' 2>/dev/null)
+.PHONY: wsl2 wsl2-down
+wsl2 wsl2-down logs: export WSL_NVIDIA_DRIVER_DIR ?= $(shell find /usr/lib/wsl/drivers -maxdepth 2 -name libnvidia-ptxjitcompiler.so.1 -printf '%h\n' 2>/dev/null)
 wsl2:
 	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2 is for WSL2, not server deployment.' >&2; exit 1; }
 	@[[ -f audiomuse/.secrets && -f immich/.secrets ]] || { echo 'Sync audiomuse/.secrets and immich/.secrets from the server before make wsl2.' >&2; exit 1; }
 	@[[ -f "$(WSL_NVIDIA_DRIVER_DIR)/libnvidia-ptxjitcompiler.so.1" ]] || { echo 'Could not identify one NVIDIA WSL driver directory; set WSL_NVIDIA_DRIVER_DIR explicitly.' >&2; exit 1; }
 	$(WSL2_COMPOSE) config --quiet
 	$(WSL2_COMPOSE) up -d $(WSL2_SERVICES)
+
+wsl2-down:
+	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2-down is for WSL2, not server deployment.' >&2; exit 1; }
+	$(WSL2_COMPOSE) down --remove-orphans
 
 .PHONY: logs
 logs:
