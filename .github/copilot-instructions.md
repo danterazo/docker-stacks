@@ -192,7 +192,9 @@
   deploy skill. Primary/secondary roles come from PVE tags in
   deployments.yaml. Never take every instance of a type down at once.
 - Guest hostnames normally match their stack names. nvidia-vm is VM 101
-  and hosts immich, plex-video, and tautulli. Tautulli also runs on LXCs
+  and hosts plex-video and tautulli. Production Immich and its selfie-timelapse
+  service run on LXC 102; VM 101 retains the migration source data only.
+  Tautulli also runs on LXCs
   108 (development plex-video) and 120 (plex-music). Hostnames such as caddy
   and adguardhome must be disambiguated by guest ID and current owner.
 - radeon-vm is VM 105 and hosts the separate radeon-vm/ollama and
