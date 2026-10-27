@@ -173,7 +173,7 @@ for autoenv_user in root dante; do
 	fi
 done
 
-REPO_URL="https://github.com/danterazo/docker-stacks.git"
+REPO_URL="git@github.com:danterazo/docker-stacks.git"
 REPO_CREATED=0
 if [ ! -d "${HOME_DIR}/.git" ]; then
 	# first-time setup; clone repository
