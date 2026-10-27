@@ -191,19 +191,19 @@
   type first, validated, then the rest, primaries last, as defined in the
   deploy skill. Primary/secondary roles come from PVE tags in
   deployments.yaml. Never take every instance of a type down at once.
-- Guest hostnames normally match their stack names. nvidia-vm is VM 101
-  and hosts plex-video and tautulli. Production Immich and its selfie-timelapse
-  service run on LXC 102; VM 101 retains the migration source data only.
-  Tautulli also runs on LXCs
-  108 (development plex-video) and 120 (plex-music). Hostnames such as caddy
+- Guest hostnames normally match their stack names. Production Plex video and
+  Tautulli run on LXC 108. Production Immich and its selfie-timelapse service
+  run on LXC 102; VM 101 retains their migration source data only. Do not deploy
+  these migrated stacks on VM 101. Tautulli also runs on LXC 120 (plex-music).
+  Hostnames such as caddy
   and adguardhome must be disambiguated by guest ID and current owner.
 - radeon-vm is VM 105 and hosts the separate radeon-vm/ollama and
   radeon-vm/vllm stacks. Ollama
   is the primary engine; vllm is opt-in through its evaluation Compose profile.
-  Keep radeon-vm and _common in its sparse checkout. Routine
+  Keep radeon-vm and \_common in its sparse checkout. Routine
   updates skip stacks with no active Compose services; do not enable the
   evaluation profile implicitly or treat absent GPU passthrough as ready.
-- Shared code such as bootstrap.sh and _common/ may affect multiple
+- Shared code such as bootstrap.sh and \_common/ may affect multiple
   mapped deployments. Establish the affected targets before validation.
 - When deploying a new stack directory to an LXC or VM, first inspect its
   current sparse-checkout mode, patterns, and included paths as dante in

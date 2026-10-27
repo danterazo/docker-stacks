@@ -265,17 +265,16 @@ existing snapshot unchanged rather than publishing a partial refresh.
   mapping has been confirmed.
 - User-confirmed placements: production `immich` and `immich-selfie-timelapse`
   run on LXC 102. VM 101 retains their migration source data; do not deploy
-  Immich there. VM 101 runs `plex-video` and
-  `tautulli`; LXC 108 runs development `plex-video` and `tautulli`; LXC 120
+  Immich there. Production `plex-video` and `tautulli` run on LXC 108; VM 101
+  retains their source data only, not an active deployment. LXC 120
   runs `plex-music` and `tautulli`. Preserve these exceptions.
 - VM 105 (`radeon-vm`) runs the separate `radeon-vm/ollama` and
   `radeon-vm/vllm` stacks, with
   Ollama primary and vLLM opt-in through its `evaluation` profile. Preserve
   both stacks beneath the hostname-matched parent directory in its sparse checkout.
 - LXC 102 is the production Immich deployment with automatic startup enabled.
-  LXC 108 is a development deployment, separate from VM 101. It
-  was stopped during initial discovery; query current state when needed
-  without storing it or starting them for validation.
+  LXC 108 is the production Plex video deployment with automatic startup enabled.
+  Query current state when needed without storing runtime status in the map.
 - Caddy maps to all three LXCs: 203 and 205 were on Cerulean and 204 on Kex.
   AdGuard Home also has duplicate hostnames: 200, 201, and 202. A hostname
   alone does not uniquely identify these guests. Report each duplicate set's
