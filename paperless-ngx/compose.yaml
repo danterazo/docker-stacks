@@ -14,12 +14,16 @@ services:
       PAPERLESS_DBENGINE: postgresql
       PAPERLESS_DATA_DIR: /usr/src/paperless/storage/data
       PAPERLESS_MEDIA_ROOT: /usr/src/paperless/storage/media
-      PAPERLESS_EXPORT_DIR: /usr/src/paperless/storage/export
       PAPERLESS_CONSUMPTION_DIR: /usr/src/paperless/storage/consume
     ports:
       - 192.168.30.101:8001:8000/tcp
     volumes:
       - paperless_virtiofs:/usr/src/paperless/storage/:rw
+      - type: volume
+        source: paperless_virtiofs
+        target: /usr/src/paperless/export/
+        volume:
+          subpath: export
     depends_on:
       paperless-db:
         condition: service_healthy
