@@ -12,13 +12,14 @@ services:
       PAPERLESS_REDIS: redis://paperless-redis:6379
       PAPERLESS_DBHOST: paperless-db
       PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DATA_DIR: /usr/src/paperless/storage/data
+      PAPERLESS_MEDIA_ROOT: /usr/src/paperless/storage/media
+      PAPERLESS_EXPORT_DIR: /usr/src/paperless/storage/export
+      PAPERLESS_CONSUMPTION_DIR: /usr/src/paperless/storage/consume
     ports:
       - 192.168.30.101:8001:8000/tcp
     volumes:
-      - ./data/paperless/:/usr/src/paperless/data/:rw
-      - ./data/media/:/usr/src/paperless/media/:rw
-      - ./data/export/:/usr/src/paperless/export/:rw
-      - ./data/consume/:/usr/src/paperless/consume/:rw
+      - paperless_virtiofs:/usr/src/paperless/storage/:rw
     depends_on:
       paperless-db:
         condition: service_healthy
@@ -71,6 +72,13 @@ services:
 networks:
   paperless-net:
     name: paperless-net
+
+volumes:
+  paperless_virtiofs: # paperless-documents -> /tank/documents/paperless-ngx (VM 101 virtiofs6)
+    driver: local
+    driver_opts:
+      type: virtiofs
+      device: paperless-documents
 
 x-dockge:
   urls:
