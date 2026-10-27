@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-26"
-  timestamp: "10:45:59 PM"
+  timestamp: "11:09:15 PM"
 
 cluster:
   entrypoint:
@@ -50,7 +50,7 @@ docker_guests:
     tags: [docker]
   105:
     hostname: radeon-vm
-    node: kex
+    node: cerulean
     address: 192.168.30.105
     pool: prod
     type: qemu
