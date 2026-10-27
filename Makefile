@@ -6,7 +6,7 @@ EXCLUDES := \( -path './.git' -o -path './.venv' -o -path './venv' -o -path './n
 WSL2_COMPOSE := docker compose --project-directory "$(CURDIR)" -f "$(CURDIR)/compose.wsl2.yaml"
 
 .PHONY: wsl2
-wsl2: export WSL_NVIDIA_DRIVER_DIR ?= $(shell find /usr/lib/wsl/drivers -maxdepth 2 -name libnvidia-ptxjitcompiler.so.1 -printf '%h\n' 2>/dev/null)
+wsl2 logs: export WSL_NVIDIA_DRIVER_DIR ?= $(shell find /usr/lib/wsl/drivers -maxdepth 2 -name libnvidia-ptxjitcompiler.so.1 -printf '%h\n' 2>/dev/null)
 wsl2:
 	@[[ "$$(uname -r)" == *microsoft*WSL2* ]] || { echo 'make wsl2 is for WSL2, not server deployment.' >&2; exit 1; }
 	@[[ -f audiomuse/.secrets && -f immich/.secrets ]] || { echo 'Sync audiomuse/.secrets and immich/.secrets from the server before make wsl2.' >&2; exit 1; }
@@ -16,7 +16,7 @@ wsl2:
 
 .PHONY: logs
 logs:
-	docker compose --project-directory "$(CURDIR)" -p desktop-workers logs -f $(LOGS_ARGS) $(WORKERS)
+	$(WSL2_COMPOSE) logs -f $(LOGS_ARGS) $(WORKERS)
 
 .PHONY: fix format fix-text fix-shell fix-javascript lint-compose-spacing lint-docker lint-docker-inner fix-caddy fix-caddy-inner deps clean
 
