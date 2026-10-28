@@ -22,6 +22,7 @@ services:
 
   tailscale:
     image: tailscale/tailscale:latest
+    init: true
     container_name: tailscale
     restart: unless-stopped
     network_mode: host
