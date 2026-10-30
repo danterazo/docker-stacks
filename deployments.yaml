@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-10-29"
-  timestamp: "11:01:54 PM"
+  timestamp: "11:07:43 PM"
 
 cluster:
   entrypoint:
@@ -104,6 +104,13 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker, gpu, nas]
+  130:
+    hostname: hermes
+    node: cerulean
+    address: 192.168.30.130
+    pool: prod
+    type: lxc
+    tags: [ai, docker]
   200:
     hostname: adguardhome
     node: cerulean
