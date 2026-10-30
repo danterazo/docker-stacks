@@ -14,6 +14,10 @@ services:
       - 192.168.30.130:9119:9119/tcp
     volumes:
       - ./data/:/opt/data/:rw
+      - /mnt/shared-ai/instructions.md:/opt/data/shared-ai/instructions.md:rw
+      - /mnt/shared-ai/preferences.md:/opt/data/shared-ai/preferences.md:rw
+      - /mnt/shared-ai/debugging.md:/opt/data/shared-ai/debugging.md:rw
+      - /mnt/shared-ai/skills/:/opt/data/shared-ai/skills/:rw
     networks:
       - hermes-net
     command: [gateway, run]
