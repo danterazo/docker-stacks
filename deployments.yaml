@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-10-26"
-  timestamp: "11:26:30 PM"
+  date: "2026-10-29"
+  timestamp: "11:01:54 PM"
 
 cluster:
   entrypoint:
@@ -50,9 +50,9 @@ docker_guests:
     tags: [docker]
   105:
     hostname: radeon-vm
-    node: cerulean
+    node: kex
     address: 192.168.30.105
-    pool: prod
+    pool: dev
     type: qemu
     tags: [gpu]
   108:
