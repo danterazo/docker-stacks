@@ -16,6 +16,7 @@ services:
       - ./data/:/opt/data/:rw
     networks:
       - hermes-net
+    command: [gateway, run]
 
 networks:
   hermes-net:
