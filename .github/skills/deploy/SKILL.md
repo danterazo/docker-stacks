@@ -97,6 +97,7 @@ test "$(id -un)" = dante
 cd /docker
 apt-get update
 apt-get upgrade
+git fetch origin main
 git merge --ff-only FETCH_HEAD
 docker compose pull --ignore-buildable
 docker compose build --pull --no-cache
