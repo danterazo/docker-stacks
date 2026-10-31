@@ -8,126 +8,88 @@ disable-model-invocation: true
 
 # Deploy
 
-This is the lightweight workflow. Use `/deploy-deep` only when the user asks
-for full functional, health, log, or visual validation.
+Lightweight workflow: push committed `main`, then run `dupull` on the
+selected running Docker guests. Use `/deploy-deep` only when full health,
+log, API or visual validation is requested. A plain "deploy" request means
+this skill, not a Make target.
 
-## Scope
+## Scope and Authorization
 
-- With no arguments, target every running Docker guest in `deployments.yaml`.
-  `/deploy all` is equivalent. `/deploy <stack or guest IDs>` narrows the set
-  to exactly the matching guests; a stack selects each guest that runs it.
-- A free-form "deploy this fix" request is not `/deploy all`: target only the
-  guests the change actually affects, using evidence (for example, which guests
-  have the faulty state). Shared files such as `bootstrap.sh` or `_common/` do
-  not make every guest relevant. Ask if the affected set is unclear.
-- Requests to "deploy recent changes" to any named container, stack, or guest
-  mean deploy the current published branch to the guest or guests hosting those
-  targets, pulling all intervening commits. Do not review Git history or
-  evaluate individual changes to decide which commits to deploy unless the user
-  asks for that analysis. Keep the normal worktree and fast-forward safety
-  checks; they protect the pull rather than select changes.
-- A `/deploy` request authorizes pushing already-committed changes on local
-  `main` to `origin/main`, then running `dupull` on the selected running
-  guests. This includes `dupull`'s APT dist-upgrade, package cleanup and
-  autoremove, registry pulls, no-cache builds, Compose up/recreation, and
-  orphan removal across every top-level stack in each selected guest. These
-  stated effects do not require a second confirmation checkpoint.
-- Do not create commits, force-push, change branches, start stopped guests,
-  run bootstrap, reboot, alter credentials or SSH trust, or widen the selected
-  guest scope. Preserve uncommitted local work; tell the user it was not
-  pushed. If publishing is blocked by divergence, missing upstream, or a
-  non-`main` branch, stop before guest changes and report the condition.
-- Use existing SSH and Proxmox access for the requested work; do not ask again
-  before read-only discovery. Obey tool approval prompts and never bypass
-  host-key checking or access failures.
-- Carry an approved deployment through execution and its completion check in
-  the same turn. A clarification of the requested check does not cancel the
-  deployment or require another go-ahead. Progress updates describe work being
-  performed, not suggestions left for the user to request again. Ask only for
-  a genuinely new decision, required approval, or user action that blocks work.
+- No argument or `all`: every running Docker guest in `deployments.yaml`.
+  `/deploy <stacks or guest IDs>`: exactly those; a stack selects every guest
+  that runs it.
+- A free-form "deploy this fix" targets only the guests the change actually
+  affects, by evidence. Shared files such as `bootstrap.sh` or `_common/` do
+  not make every guest relevant; ask if the set is unclear.
+- "Deploy recent changes to X" means deploying the current published branch,
+  with all intervening commits, to X's guests. Do not review history to pick
+  commits; the fast-forward checks still apply.
+- The request authorizes an ordinary push of committed local `main` and
+  `dupull` on the selected running guests, including its APT dist-upgrade,
+  clean and `autoremove --purge`, image pulls, no-cache builds, Compose
+  recreation and orphan removal across every top-level stack in each guest.
+  No second confirmation is needed.
+- Not authorized: creating commits, force-pushing, changing branches,
+  starting stopped guests, bootstrap, reboots, credential or SSH-trust
+  changes, or widening the guest scope. Preserve uncommitted local work and
+  say it was not pushed; alert the user to staged changes.
+- Use existing SSH and Proxmox access without asking again. Obey tool
+  prompts; never bypass host-key or access failures.
+- Carry an approved deployment through completion in the same turn. Ask only
+  for a genuinely new decision or a blocking user action. A user pause stops
+  push, refresh and deployment until explicitly resumed.
 
-## Target And Publish
+## Preflight
 
-1. First follow the mandatory pre-deployment refresh in
-   `.github/skills/refresh-deployments/SKILL.md`: complete live discovery,
-   update local `deployments.yaml`, and validate it before selecting targets,
-   publishing commits, or choosing guest SSH/access routes. Stop if the refresh
-   cannot complete; never deploy using a stale map. This metadata update is
-   included in the deployment request, but must remain uncommitted unless
-   separately approved. It does not expand the requested guest scope.
-2. Read `.github/copilot-instructions.md` and the refreshed `deployments.yaml`.
-   Confirm the local checkout identity and branch. Preserve and exclude staged, unstaged,
-   and untracked local files; do not commit them.
-   Read the current deployment-blocker notes in `/configs/ai/pending-changes.md`.
-   Skip and report a selected guest with a known unresolved service/network
-   blocker; do not treat `dupull` success as clearing it. Lite mode does not
-   discover new application reachability failures.
-3. Fetch `origin/main` and check the local `main` relationship. If local `main`
-   has fast-forwardable commits ahead, push them with ordinary `git push` (no
-   force). If it is only behind, use the fetched `origin/main` as the target.
-   Stop if local `main` and `origin/main` have diverged or the current branch
-   is not `main`. Record the resulting published SHA.
-4. Resolve selected guest IDs, current owners, state, and networking role tags
-   from the refreshed map and the refresh's live inventory. Use only running
-   Docker guests; report stopped guests as skipped and never start them. Do not infer ownership from
-   cached metadata; recheck ownership and state immediately before guest
-   operations. If placement changes, refresh again before continuing.
-5. For LXCs, SSH to the current Proxmox owner and use `pct exec`; do not SSH
-   directly to the LXC. For VMs, use the existing trusted alias and confirm
-   `ssh -G <alias>` resolves to `dante`; confirm `id -un` after connecting.
-   Run guest Git, Docker, Compose, and helpers as `dante`, without `sudo`.
-6. Batch read-only discovery by owner. Before `dupull`, verify each selected
-   guest is the expected hostname, its `/docker` worktree has no local changes,
-   its Git operation can fast-forward to the target SHA, and `dante` can reach
-   Docker. If a guest has local changes, is divergent, or fails access checks,
-   preserve it and stop that guest without pulling or cleaning it. Continue
-   independent preflight for other targets.
-
-`dpull` fetches `origin/main`, verifies the guest's current `HEAD` is an
-ancestor of `FETCH_HEAD`, then merges with `--ff-only`. It stops on local-ahead
-or divergent history and never creates guest-local merge commits. Keep this
-guard even though deployment preflight performs the same ancestry check.
-
-### New Stack Sparse Checkout
-
-When adding a new stack directory to an LXC or VM, inspect
-`git config --get core.sparseCheckout`,
-`git config --get core.sparseCheckoutCone`, `git sparse-checkout list`, and
-the sparse-checkout patterns under the actual Git directory as dante in
-`/docker`. Compare the selected stack with bootstrap.sh's host profile and
-update that source profile when needed. After fetching the published revision,
-add the required stack path in the guest's existing cone or non-cone mode,
-preserving all existing stack paths and exclusions, then fast-forward and
-verify the new Compose files exist before deployment commands.
-`git sparse-checkout add` inherits the configured mode; do not pass
-`--cone` or `--no-cone` to `add`, which may not support those options.
-Review guest
-changes and collisions first; never overwrite local work or replace the entire
-profile with a guessed list. Do not run full bootstrap solely to change sparse
-checkout. This step is for new stack directories, not extra services added to
-an existing included stack, and it does not expand deployment scope.
+1. Run the mandatory refresh in `.github/skills/refresh-deployments/SKILL.md`,
+   including its separate metadata commit when there is drift. Stop if it
+   cannot complete.
+2. Confirm the local checkout identity and branch. Check TickTick (Projects >
+   Homelab) for unresolved blockers on selected guests; skip and report
+   those, since `dupull` success does not clear them.
+3. Fetch `origin/main`. Push fast-forwardable local commits with plain
+   `git push`; if local `main` is only behind, target `origin/main`. Stop if
+   they diverged or the branch is not `main`. Record the published SHA.
+4. Resolve selected guests, owners, state and role tags from the refresh.
+   Use only running Docker guests; report stopped ones as skipped. Recheck
+   owner and state immediately before operating on each guest.
+5. Reach LXCs through their owning node with `pct exec`; reach VMs through
+   their trusted alias after confirming `ssh -G` resolves to `dante` and
+   `id -un` matches. Run guest Git, Docker and helpers as `dante`, no `sudo`.
+6. Batch read-only checks by owner. For each guest confirm: the expected
+   hostname; no tracked changes in `/docker`; a fast-forward to the target
+   SHA is possible; `dante` reaches Docker; and no container is unhealthy,
+   restarting or exited (state from `docker ps` only). A failing guest is
+   preserved and skipped without pulling or cleaning; continue preflight for
+   the others. Report untracked files and leave them unless they collide
+   with incoming paths.
+7. New stack directory on a guest: as `dante` in `/docker`, inspect
+   `core.sparseCheckout`, `core.sparseCheckoutCone` and
+   `git sparse-checkout list`, and compare with the host profile in
+   `bootstrap.sh` (update that profile if needed). After fetching, run
+   `git sparse-checkout add <stack>` in the existing mode (do not pass
+   `--cone` or `--no-cone`), preserving existing paths and exclusions, and
+   confirm the Compose files exist. Never run full bootstrap for this. New
+   services in an already-included stack do not need this step.
 
 ## Networking Order
 
-AdGuard Home and Caddy remain staggered even in lite mode:
+AdGuard Home and Caddy stay staggered even in lite mode:
 
-1. Classify roles from live tags and count running instances. If roles are
-   ambiguous or fewer than two instances are running, skip that service type
-   and report why; do not guess or start guests.
-2. Run one secondary of each selected networking type first, one guest at a
-   time. Before each, confirm another instance of that type is running via
-   Proxmox state. Continue only after `dupull` exits successfully.
-3. Run remaining selected secondaries one at a time, then primaries last,
-   each only after the previous command exits successfully.
+1. Classify roles from live tags. If roles are ambiguous or fewer than two
+   instances are running, skip that type and report why.
+2. Run one secondary of each type first, one guest at a time, after
+   confirming in Proxmox that another instance of that type is running.
+3. Then the remaining secondaries, then primaries last, each only after the
+   previous `dupull` exits successfully.
 
-Do not run DNS, API, healthcheck, webpage, Caddy-route, browser, or container
-log probes in this workflow.
+Do not run DNS, API, healthcheck, webpage, browser, Caddy-route or log probes
+in this workflow.
 
 ## Run
 
-Run `dupull` from `/docker` in a fresh noninteractive Bash session as `dante`.
-`dupull`, `upgrade`, and `bootstrap` are functions. Source their definitions
-explicitly; alias expansion is not required:
+Run in a fresh noninteractive Bash as `dante`. `dupull` and `upgrade` are
+functions, so source them explicitly:
 
 ```bash
 set -e
@@ -141,79 +103,56 @@ declare -F upgrade >/dev/null
 dupull
 ```
 
-For an LXC, run that body through its confirmed Proxmox owner with
+For an LXC, run it on the confirmed owner through
 `pct exec <id> --keep-env 0 -- runuser -u dante -- /bin/bash --noprofile --norc`.
-For a VM, run it through its trusted `dante` SSH alias. Do not run it locally or
-on a Proxmox host.
+For a VM, use its trusted `dante` alias. Never run it locally or on a
+Proxmox host.
 
-`dupull` runs `upgrade` followed by `dpull`. `upgrade` performs APT update,
-dist-upgrade, clean, and autoremove with purge. `dpull` pulls Git, pulls/builds
-images, and runs `docker compose up --build -d --remove-orphans` for every
-top-level stack in `/docker`; it does not use `down -v`. A named stack selects
-guests, but does not make `dupull` stack-scoped.
+`dupull` runs `upgrade` (APT update, dist-upgrade, clean, autoremove with
+purge), then `dpull`: fetch `origin/main`, verify `HEAD` is an ancestor of
+`FETCH_HEAD`, `merge --ff-only`, then for every top-level stack pull/build
+images and run `docker compose up --build -d --remove-orphans` (never
+`down -v`). A named stack selects guests; `dupull` is not stack-scoped.
 
-Capture each invocation's real exit status in the calling shell, print a
-guest-specific completion marker (ID and exit code), and preserve that status
-as the command's exit code. Do not let a final `printf` mask failure. Retain
-explicit Git/package/image/Compose errors even if the helper returns zero.
-Use the integrated terminal directly for mutations; delegate only bounded
-read-only checks when useful. Do not filter interactive commands through
-pipelines or use pagers for status output.
-
-If terminal transcripts are unreliable, save known-noninteractive helper output
-and its real exit status in separate per-guest files under `/tmp/ai`, after
-checking the directory's type and ownership. Read those records to recover
-completion; do not rerun an uncertain update without explicit approval.
+Capture each invocation's real exit status and print a per-guest marker (ID
+and exit code) without masking it. If terminal transcripts are unreliable,
+write helper output and exit status to separate per-guest files under
+`/tmp/ai` (check its type and owner first) and read them back. Run mutations
+in the integrated terminal; delegate only bounded read-only checks. Do not
+pipe interactive commands or use pagers.
 
 ## Completion
 
-- Run targets sequentially and keep output bounded. A zero exit status from
-  `dupull` is the completion criterion for that guest; its successful Compose
-  start commands are the validation. Do not inspect container health, call
-  APIs, open webpages, read logs, or run visual checks.
-- Do not add mount, NFS, image-user, or filesystem write-access probes as
-  deployment gates. Use Git/package/image/Compose command errors, not an
-  inability to inspect Docker's private volume directories, to judge the run.
-- On a nonzero exit or explicit pull/build/up error, stop the rollout. Report
-  the guest, command phase, exit status, and that later guests were skipped.
-  Do not retry or roll back automatically.
+- Run targets sequentially with bounded output. Exit status 0 from `dupull`
+  completes a guest. No health, API, web, log or visual checks, and no mount,
+  NFS or write-access probes as gates.
+- On a nonzero exit or an explicit Git, package, image or Compose error, stop
+  the rollout and report the guest, phase, exit status and skipped guests. No
+  automatic retry or rollback.
 - Exception: a recreate failing with `tried to kill container, but did not
-receive an exit event` can mean the old process is still flushing NFS
-  writeback (D state in `nfs_wb_all`). Wait for that process to exit, rerun
-  `dupull` on the same guest once, and `docker rename` any leftover
-  `<hash>_<name>` container back to its service name.
+receive an exit event` can mean NFS writeback is still flushing (process in
+  D state, `nfs_wb_all`). Wait for it to exit, rerun `dupull` once on that
+  guest, and `docker rename` any leftover `<hash>_<name>` container back to
+  its service name.
 - Docker never updates an existing named volume's `driver_opts`. When a
-  published change edits NFS/virtiofs volume options without renaming the
-  volume, `docker compose down` that stack and `docker volume rm` its affected
-  volumes before `dupull`; share data is unaffected.
-- Missing output or an absent exit code means unknown, not failed or complete.
-  Recover the original command result first; if unavailable, use one bounded
-  read-only check to establish what is known. A matching Git SHA alone does
-  not prove image pulls or Compose succeeded. Do not rerun an uncertain
-  mutation automatically, start another mutation while it may still be running,
-  or declare unrelated guests failed. Preserve the existing terminal recovery
-  and stop-on-error rules; report the exact remaining uncertainty if blocked.
-- Report the pushed/current published SHA, selected guest IDs and owners,
-  `dupull` result per guest, and skipped or failed targets. Keep the report
-  concise. For deep checks, use `/deploy-deep` as a separate request.
+  published change edits NFS or virtiofs volume options without renaming the
+  volume, `docker compose down` that stack and `docker volume rm` the
+  affected volumes before `dupull`; share data is unaffected.
+- Missing output or exit status means unknown, not passed or failed. Recover
+  the original result or run one bounded read-only check; a matching SHA
+  alone does not prove pulls or Compose succeeded. Never rerun an uncertain
+  mutation or start another while it may still be running.
+- Report the published SHA, guests and owners, per-guest `dupull` results,
+  and skipped or failed targets. Lite success confirms `dupull` only, not
+  application reachability.
 
 ## Learn From The Run
 
-Before the final report, briefly review the session's failures, tricky steps,
-user corrections, repeated work, and avoidable delays. Do this automatically
-on success or when stopping for a blocker, using evidence already collected;
-do not add probes, log reads, or a session-history investigation for this step.
-
-- If there is a concrete reusable lesson, make a small targeted update to the
-  relevant deployment skill. Update `.github/copilot-instructions.md` only
-  when the lesson applies across workflows. Preserve concurrent edits and
-  existing approvals, safety gates, and lite-mode limits. This step authorizes
-  these narrow documentation edits, not operational changes or scope expansion.
-- Record unresolved incidents in the canonical pending ledger with verified
-  evidence, target/path, blocker, and next safe action. Keep temporary runtime
-  observations and unproven hypotheses out of enduring instructions; never
-  record credentials or turn a workaround into a permission exception.
-- Validate changed documentation with `git diff --check` and mention the
-  lesson/update briefly in the final report. Do not commit or push retrospective
-  edits without an explicit request; an earlier deployment push does not cover
-  newly written documentation. If there is no new lesson, make no edits.
+Before the final report, review failures, user corrections, repeated work and
+delays using evidence already collected; add no probes for this. Put a
+concrete reusable lesson in the relevant deployment skill (the repo's
+`.github/copilot-instructions.md` only for cross-workflow lessons) without
+weakening approvals, gates or lite limits. Track unresolved incidents in
+TickTick with evidence, target, blocker and next safe action; keep
+credentials and unproven hypotheses out of instructions. Check edits with
+`git diff --check` and do not commit them without an explicit request.
