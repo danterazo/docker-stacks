@@ -5,7 +5,7 @@
 alias dwatch="watch -d -n 1"
 alias cff="clear && fastfetch"
 upgrade() {
-	sudo apt update && sudo apt dist-upgrade -y && sudo apt clean && sudo apt autoremove -y --purge
+	sudo apt-get update && sudo apt-get dist-upgrade -y && sudo apt-get clean && sudo apt-get autoremove -y --purge
 }
 alias sn="sudo nano"
 alias sc="sudo cat"

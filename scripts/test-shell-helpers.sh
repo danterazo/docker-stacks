@@ -31,7 +31,7 @@ for expansion in on off; do
 			expected=()
 			case "$helper" in
 			dupull | dubpull | durpull | durbpull)
-				expected+=("sudo apt update" "sudo apt dist-upgrade -y" "sudo apt clean" "sudo apt autoremove -y --purge")
+				expected+=("sudo apt-get update" "sudo apt-get dist-upgrade -y" "sudo apt-get clean" "sudo apt-get autoremove -y --purge")
 				;;
 			esac
 			case "$helper" in
