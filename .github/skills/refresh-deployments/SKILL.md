@@ -109,7 +109,8 @@ here, not in the YAML.
   reading: `LC_ALL=C TZ=America/Chicago date +'%Y-%m-%d|%-I:%M:%S %p'`.
   Update both together only when metadata changes. A timestamp is not proof
   of remote discovery; label local-only edits as such.
-- Metadata only: no notes, procedures, runtime status, uptime, resources,
+- Metadata only: no notes, procedures, guest running state, node online
+  state, uptime, resources,
   provenance or disk identifiers. Preserve user comments verbatim beside
   their entries. Use small patches or a comment-preserving YAML API (such as
   Node `yaml` `parseDocument`) and review the diff. Ask if a change would make
@@ -126,10 +127,14 @@ here, not in the YAML.
   - Production `immich` and its selfie-timelapse service run on LXC 102;
     production `plex-video` and Tautulli on LXC 108; LXC 120 (`plex-music`)
     also runs Tautulli. VM 101 keeps their migration source data only; never
-    deploy them there.
+    deploy them there. Tautulli is a service inside the Plex Compose stacks,
+    not its own sparse-checkout path. LXCs 102 and 108 are production guests
+    with automatic startup; query their state when needed.
   - VM 105 (`radeon-vm`) runs `radeon-vm/ollama` (primary) and
     `radeon-vm/vllm` (opt-in `evaluation` profile). Keep `radeon-vm` and
     `_common` in its sparse checkout; never enable the profile implicitly.
+    Routine updates skip stacks with no active Compose services; absent GPU
+    passthrough does not mean the VM is ready.
   - Caddy runs on LXCs 203 and 205 (Cerulean) and 204 (Kex) at last
     discovery; AdGuard Home on 200, 201 and 202. Disambiguate by ID and
     owner. Flag duplicate sets with no primary, several primaries or untagged
@@ -155,4 +160,6 @@ here, not in the YAML.
    without approval.
 3. Summarize additions, removals, migrations, address and tag changes,
    Docker-evidence classifications, unresolved mappings and incomplete reads.
-   State that no remote changes were made.
+   State that no remote changes were made. For a deployment-triggered
+   refresh, report the metadata commit message and summary before
+   publishing or guest operations.

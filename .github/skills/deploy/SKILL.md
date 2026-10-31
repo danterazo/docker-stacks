@@ -36,8 +36,9 @@ this skill, not a Make target.
 - Use existing SSH and Proxmox access without asking again. Obey tool
   prompts; never bypass host-key or access failures.
 - Carry an approved deployment through completion in the same turn. Ask only
-  for a genuinely new decision or a blocking user action. A user pause stops
-  push, refresh and deployment until explicitly resumed.
+  for a genuinely new decision or a blocking user action; progress updates
+  describe work being done, not suggestions left for the user. A user pause
+  stops push, refresh and deployment until explicitly resumed.
 
 ## Preflight
 
@@ -141,7 +142,8 @@ receive an exit event` can mean NFS writeback is still flushing (process in
 - Missing output or exit status means unknown, not passed or failed. Recover
   the original result or run one bounded read-only check; a matching SHA
   alone does not prove pulls or Compose succeeded. Never rerun an uncertain
-  mutation or start another while it may still be running.
+  mutation, start another while it may still be running, or declare
+  unrelated guests failed.
 - Report the published SHA, guests and owners, per-guest `dupull` results,
   and skipped or failed targets. Lite success confirms `dupull` only, not
   application reachability.
@@ -152,7 +154,9 @@ Before the final report, review failures, user corrections, repeated work and
 delays using evidence already collected; add no probes for this. Put a
 concrete reusable lesson in the relevant deployment skill (the repo's
 `.github/copilot-instructions.md` only for cross-workflow lessons) without
-weakening approvals, gates or lite limits. Track unresolved incidents in
+weakening approvals, gates or lite limits. This step authorizes those narrow
+documentation edits only, not operational changes or scope expansion. Track
+unresolved incidents in
 TickTick with evidence, target, blocker and next safe action; keep
 credentials and unproven hypotheses out of instructions. Check edits with
 `git diff --check` and do not commit them without an explicit request.

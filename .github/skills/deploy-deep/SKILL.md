@@ -38,11 +38,13 @@ uncertain results also apply unless overridden here.
   existing SSH and Proxmox access; do not ask. Never change credentials,
   host keys, permissions or access methods; obey tool prompts. An unreachable
   target is a recorded gap, never silently dropped or bypassed.
-- Before the first mutation, make one consolidated approval request covering
+- Gather all read-only findings first. Before the first mutation, make one
+  consolidated approval request covering
   exact targets, rollout order, guest-wide downtime, `-v` volume removal,
   image/build changes, orphan removal and open decisions, unless those exact
   impacts were already approved in this thread. Then continue without
-  further confirmation.
+  further confirmation. A generic request to deploy a config edit does not
+  cover workloads beyond the disclosed scope.
 - Use `dpull`, not `dupull`. Run `upgrade` only on an explicit OS-upgrade
   request, with separate approval for package upgrades and removals.
 - Never implicit: commits, pushes beyond authorized existing commits, file
@@ -64,7 +66,8 @@ downtime, bootstrap, upgrades or credentials.
 
 ## Subagents
 
-Use two to four bounded read-only workers for discovery, preflight,
+Unless the user asks for no subagents, use two to four bounded read-only
+workers for discovery, preflight,
 functional probes and log review. Give each explicit guest IDs, owners,
 access methods, the target SHA and the same no-secrets, no-install and
 no-trust-bypass rules; a subagent is not new permission. The coordinator is
@@ -243,7 +246,8 @@ dpull
   the first failure. Neither step is stack-scoped.
 - Pass arguments safely through SSH, the owner shell and `pct exec`; never
   interpolate discovery output. Never run the body locally or on a Proxmox
-  host. Snippets pasted into an interactive SSH shell must avoid `set -e` and
+  host. If elevated access is required but not already approved, stop.
+  Snippets pasted into an interactive SSH shell must avoid `set -e` and
   guard phases with `if`/`return` instead.
 - Read remote output through bounded command results (`tail`, `grep`); write
   no logs, staging or scratch files on Proxmox nodes or guests. Local logs go
@@ -285,8 +289,11 @@ a baseline before mutation and repeat after settling.
 | Internal dependencies  | In-guest native probes. Immich Postgres: Compose healthcheck plus datadir bind ownership against the process UID/GID (`999:999`, source `/docker/immich/data/immich`). Valkey: `PING`, `aof_last_write_status:ok` (strip `\r`), and write access to `/docker/immich/redis-data` as the UID verified from the running image. |
 
 - For permission errors, compare bind ownership and modes with the process
-  UID/GID read-only. No chown, chmod, deletion or database recreation until
-  the mismatch is confirmed and a recovery plan approved. Compose `user:`
+  UID/GID and inspect the specific denied path read-only; also check whether
+  bootstrap changed that ownership. No chown, chmod, deletion or database
+  recreation until the mismatch is confirmed and a recovery plan approved;
+  authorized ownership repairs may then address the verified cause. Compose
+  `user:`
   sets in-container identity and does not map host IDs: fix host ownership or
   design an idmapped mount, never daemon-wide `userns-remap`.
 - An unexpected response or a failed, unreachable or unauthorized probe is a
@@ -336,7 +343,8 @@ a baseline before mutation and repeat after settling.
      OAuth apps such as Immich; capture the app's initial page promptly. In
      backend mode, defer the handoff. Prefer shared or background pages and
      disclose if tabs cannot be hidden; never change browser, TLS, DNS or
-     trust settings. A normal-DNS visit does not replace per-instance Caddy
+     trust settings, and never browse an HTTPS IP that causes a certificate
+     mismatch. A normal-DNS visit does not replace per-instance Caddy
      checks. If the browser cannot validate a page, report the gap and stop,
      except for deferred OAuth handoffs in backend mode.
 4. Advance networking waves only after the guest passes. Never claim full
