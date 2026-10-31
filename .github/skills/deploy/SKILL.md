@@ -20,6 +20,12 @@ for full functional, health, log, or visual validation.
   guests the change actually affects, using evidence (for example, which guests
   have the faulty state). Shared files such as `bootstrap.sh` or `_common/` do
   not make every guest relevant. Ask if the affected set is unclear.
+- Requests to "deploy recent changes" to a named stack or guest mean deploy
+  the current published branch to those targets, pulling all intervening
+  commits. Do not review Git history or evaluate individual changes to decide
+  which commits to deploy unless the user asks for that analysis. Keep the
+  normal worktree and fast-forward safety checks; they protect the pull rather
+  than select changes.
 - A `/deploy` request authorizes pushing already-committed changes on local
   `main` to `origin/main`, then running `dupull` on the selected running
   guests. This includes `dupull`'s APT dist-upgrade, package cleanup and
