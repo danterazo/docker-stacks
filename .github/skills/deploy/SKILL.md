@@ -89,15 +89,19 @@ in this workflow.
 
 ## Run
 
-Run in a fresh noninteractive Bash as `dante`. `dupull` and `upgrade` are
-functions, so source them explicitly:
+Run in a fresh noninteractive Bash as `dante`. The following sequence is executed on each selected guest:
 
 ```bash
 set -e
 test "$(id -un)" = dante
 cd /docker
-source /docker/_common/aliases.sh
-source /docker/_common/utility-aliases.sh
+apt-get update
+apt-get upgrade
+git merge --ff-only FETCH_HEAD
+docker compose pull --ignore-buildable
+docker compose build --pull --no-cache
+docker compose up --build -d --remove-orphans
+```
 source /docker/_common/functions.sh
 declare -F dupull >/dev/null
 declare -F upgrade >/dev/null
