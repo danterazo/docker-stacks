@@ -116,10 +116,13 @@
   explicit `/deploy` request authorizes `dupull`'s APT upgrades/removal and
   guest-wide pull/build/recreate effects. Never commit uncommitted work or
   force-push. A request to add a skill is not permission to deploy.
-- Use `/deploy-deep` in `.github/skills/deploy-deep/SKILL.md` only when the
-  user requests the exhaustive deployment workflow. It uses `dcd -v` and
+- Use `/deploy-deep` in
+  `.github/skills/deploy-deep/SKILL.md` only when the user requests the
+  exhaustive deployment workflow. It uses `dcd -v` and
   `dpull`, with staged networking rollout, health/API/log/browser checks, and
   the additional volume-removal and downtime gates defined in that skill.
+- Treat a request to "deploy" as invoking the repo-local deployment skill,
+  not as a Make target; do not guess or probe for `make deploy`.
 - Both workflows resolve live owners and use existing SSH/Proxmox access;
   run guest Git, Docker, Compose, and helpers as `dante`, never locally or on
   the PVE host. Keep stopped guests untouched and deploy only published
