@@ -89,46 +89,6 @@ services:
     volumes:
       - ./data/worker-3-plugins/:/app/plugin/installed/:rw
 
-  audiomuse-worker-4:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-4
-    hostname: kex-worker-4
-    volumes:
-      - ./data/worker-4-plugins/:/app/plugin/installed/:rw
-
-  audiomuse-worker-5:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-5
-    hostname: kex-worker-5
-    volumes:
-      - ./data/worker-5-plugins/:/app/plugin/installed/:rw
-
-  audiomuse-worker-6:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-6
-    hostname: kex-worker-6
-    volumes:
-      - ./data/worker-6-plugins/:/app/plugin/installed/:rw
-
-  audiomuse-worker-7:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-7
-    hostname: kex-worker-7
-    volumes:
-      - ./data/worker-7-plugins/:/app/plugin/installed/:rw
-
-  audiomuse-worker-8:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-8
-    hostname: kex-worker-8
-    volumes:
-      - ./data/worker-8-plugins/:/app/plugin/installed/:rw
-
 networks:
   audiomuse-net:
     name: audiomuse-net
