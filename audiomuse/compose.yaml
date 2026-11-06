@@ -81,6 +81,22 @@ services:
     volumes:
       - ./data/worker-2-plugins/:/app/plugin/installed/:rw
 
+  audiomuse-worker-3:
+    extends:
+      service: audiomuse-worker
+    container_name: audiomuse-worker-3
+    hostname: kex-worker-3
+    volumes:
+      - ./data/worker-3-plugins/:/app/plugin/installed/:rw
+
+  audiomuse-worker-4:
+    extends:
+      service: audiomuse-worker
+    container_name: audiomuse-worker-4
+    hostname: kex-worker-4
+    volumes:
+      - ./data/worker-4-plugins/:/app/plugin/installed/:rw
+
 networks:
   audiomuse-net:
     name: audiomuse-net
