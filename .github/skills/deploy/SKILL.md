@@ -158,7 +158,7 @@ receive an exit event` can mean NFS writeback is still flushing (process in
 Before the final report, review failures, user corrections, repeated work and
 delays using evidence already collected; add no probes for this. Put a
 concrete reusable lesson in the relevant deployment skill (the repo's
-`.github/copilot-instructions.md` only for cross-workflow lessons) without
+`AGENTS.md` only for cross-workflow lessons) without
 weakening approvals, gates or lite limits. This step authorizes those narrow
 documentation edits only, not operational changes or scope expansion. Track
 unresolved incidents in
