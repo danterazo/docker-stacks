@@ -73,22 +73,6 @@ services:
               capabilities:
                 - gpu
 
-  audiomuse-worker-2:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-2
-    hostname: kex-worker-2
-    volumes:
-      - ./data/worker-2-plugins/:/app/plugin/installed/:rw
-
-  audiomuse-worker-3:
-    extends:
-      service: audiomuse-worker
-    container_name: audiomuse-worker-3
-    hostname: kex-worker-3
-    volumes:
-      - ./data/worker-3-plugins/:/app/plugin/installed/:rw
-
 networks:
   audiomuse-net:
     name: audiomuse-net
