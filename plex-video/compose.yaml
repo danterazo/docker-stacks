@@ -4,8 +4,7 @@ services:
     image: plexinc/pms-docker:latest
     restart: unless-stopped
     runtime: nvidia
-    ports:
-      - 32400:32400/tcp
+    network_mode: host
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
@@ -13,8 +12,6 @@ services:
       - /tank/media/videos/:/media/videos/:rw
     tmpfs:
       - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
-    networks:
-      - plex-video-net
 
   # TODO: add oauth2
   tautulli-video:
