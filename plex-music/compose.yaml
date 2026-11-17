@@ -3,8 +3,7 @@ services:
     container_name: plex-music
     image: plexinc/pms-docker:latest
     restart: always
-    ports:
-      - 32400:32400/tcp
+    network_mode: host
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
@@ -13,8 +12,6 @@ services:
       - /mnt/audiobooks/:/media/audiobooks/:rw # LXC bind mount of tank/media/audiobooks
     tmpfs:
       - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
-    networks:
-      - plex-music-net
 
   # TODO: add oauth2
   tautulli-music:
