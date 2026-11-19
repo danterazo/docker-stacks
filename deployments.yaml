@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-11-19"
-  timestamp: "3:42:59 AM"
+  timestamp: "4:40:14 AM"
 
 cluster:
   entrypoint:
@@ -48,6 +48,13 @@ docker_guests:
     pool: dev
     type: qemu
     tags: [gpu]
+  107:
+    hostname: calibre
+    node: kex
+    address: 192.168.30.107
+    pool: prod
+    type: lxc
+    tags: [docker, nas]
   108:
     hostname: plex-video
     node: kex
@@ -90,6 +97,13 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker]
+  119:
+    hostname: traccar
+    node: kex
+    address: 192.168.30.119
+    pool: prod
+    type: lxc
+    tags: [docker]
   120:
     hostname: plex-music
     node: kex
@@ -104,6 +118,20 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker, gpu, nas]
+  122:
+    hostname: dreeve
+    node: kex
+    address: 192.168.30.122
+    pool: prod
+    type: lxc
+    tags: [docker]
+  123:
+    hostname: speedtest
+    node: kex
+    address: 192.168.30.123
+    pool: prod
+    type: lxc
+    tags: [docker]
   130:
     hostname: hermes
     node: cerulean
