@@ -1,0 +1,44 @@
+x-dreeve: &dreeve
+  image: robiningelbrecht/dreeve:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+    - .secrets
+  environment:
+    PUID: 1000
+    PGID: 1000
+  volumes:
+    - ./data/build/:/var/www/build/:rw
+    - ./data/database/:/var/www/storage/database/:rw
+    - ./data/files/:/var/www/storage/files/:rw
+    - ./data/watch/:/var/www/watch/:rw # drop .fit/.tcx/.gpx files here to import them
+    - ./data/backups/:/var/www/backups/:rw
+  networks:
+    - dreeve-net
+
+services:
+  dreeve:
+    <<: *dreeve
+    container_name: dreeve
+    ports:
+      - 192.168.30.122:8070:8080/tcp
+    healthcheck:
+      test: [CMD, curl, -f, http://localhost:2019/metrics]
+      start_period: 60s
+
+  # runs the recurring background tasks against the same volumes
+  dreeve-daemon:
+    <<: *dreeve
+    container_name: dreeve-daemon
+    command: [bin/console, app:daemon:run]
+    healthcheck:
+      test: [CMD-SHELL, test -f /var/www/storage/database/dreeve.db]
+      start_period: 5s
+
+networks:
+  dreeve-net:
+    name: dreeve-net
+
+x-dockge:
+  urls:
+    - https://bike.samskeyti.net/

@@ -1,0 +1,30 @@
+services:
+  traccar:
+    image: traccar/traccar:latest
+    container_name: traccar
+    restart: unless-stopped
+    ports:
+      - 192.168.30.119:8082:8082/tcp # web UI and API
+      - 192.168.30.119:5002:5002/tcp # tk103 devices
+      - 192.168.30.119:5002:5002/udp # tk103 devices
+      - 192.168.30.119:5055:5055/tcp # Traccar Client (OsmAnd)
+    env_file: .env
+    volumes:
+      - ./config/:/opt/traccar/conf/:ro
+      - ./data/db/:/opt/traccar/data/:rw
+      - ./data/logs/:/opt/traccar/logs/:rw
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: 1
+    networks:
+      - traccar-net
+
+networks:
+  traccar-net:
+    name: traccar-net
+
+x-dockge:
+  urls:
+    - https://traccar.samskeyti.net/

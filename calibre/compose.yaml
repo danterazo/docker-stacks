@@ -1,0 +1,24 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      PUID: 1000
+      PGID: 1000
+    restart: unless-stopped
+    ports:
+      - 192.168.30.107:8083:8083/tcp
+    env_file: .env
+    volumes:
+      - ./data/:/config/:rw
+      - /tank/media/books/novels/Calibre/:/books/:rw
+    networks:
+      - calibre-net
+
+networks:
+  calibre-net:
+    name: calibre-net
+
+x-dockge:
+  urls:
+    - https://books.samskeyti.net/

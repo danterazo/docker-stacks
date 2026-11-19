@@ -1,0 +1,34 @@
+services:
+  speedtest:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest
+    environment:
+      PUID: 1000
+      PGID: 1000
+      APP_NAME: Samskeyti Speed Tester
+      APP_URL: https://speed.samskeyti.net
+      SPEEDTEST_SCHEDULE: 0 0 * * *
+    restart: unless-stopped
+    ports:
+      - 192.168.30.123:9374:80/tcp
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      - ./data/:/config/:rw
+    healthcheck:
+      test: [CMD-SHELL, curl -fsS http://localhost/api/healthcheck || exit 1]
+      interval: 10s
+      retries: 3
+      start_period: 30s
+      timeout: 10s
+    networks:
+      - speedtest-net
+
+networks:
+  speedtest-net:
+    name: speedtest-net
+
+x-dockge:
+  urls:
+    - https://speed.samskeyti.net/
