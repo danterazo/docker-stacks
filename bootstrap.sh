@@ -11,9 +11,105 @@ HOME_DIR="/docker"
 DOCKER_FALLBACK_SUITE="resolute" # latest LTS
 
 : 'UPGRADE UBUNTU'
-# upgrade to stable interim releases, but never to a development release.
-sudo sed -i 's/^Prompt=.*/Prompt=normal/' /etc/update-manager/release-upgrades
-sudo do-release-upgrade -f DistUpgradeViewNonInteractive
+# follow stable interim releases; stop rather than continue after a failed upgrade.
+upgrade_ubuntu() {
+	local release_file="$1" policy_file="$2"
+	local current stable stable_codename output candidate attempts=0
+	local -a release_args=()
+
+	# shellcheck source=/dev/null
+	source "$release_file" || return 1
+	if [[ ${ID:-} != ubuntu ]]; then
+		printf 'Release upgrades require an Ubuntu system\n' >&2
+		return 1
+	fi
+
+	if [[ $(grep -c '^Prompt=' "$policy_file") != 1 ]]; then
+		printf 'Expected exactly one Prompt setting in %s\n' "$policy_file" >&2
+		return 1
+	fi
+	if ! grep -qx 'Prompt=normal' "$policy_file"; then
+		sudo sed -i 's/^Prompt=.*/Prompt=normal/' "$policy_file" || return 1
+	fi
+
+	while ((attempts <= 6)); do
+		# refresh package & release information before checking for a release.
+		sudo apt-get update && sudo apt-get dist-upgrade -y &&
+			sudo apt-get install -y --no-install-recommends distro-info ubuntu-release-upgrader-core || return 1
+		unset ID VERSION_ID
+		# shellcheck source=/dev/null
+		source "$release_file" || return 1
+		if [[ ${ID:-} != ubuntu || ! ${VERSION_ID:-} =~ ^[0-9]{2}\.[0-9]{2}$ ]]; then
+			printf 'Cannot determine the current Ubuntu release from %s\n' "$release_file" >&2
+			return 1
+		fi
+		current="$VERSION_ID"
+		stable=$(ubuntu-distro-info --stable --release) || return 1
+		stable_codename=$(ubuntu-distro-info --stable) || return 1
+		stable=${stable%% *}
+		if [[ ! $stable =~ ^[0-9]{2}\.[0-9]{2}$ ]]; then
+			printf 'Cannot determine the latest stable Ubuntu release\n' >&2
+			return 1
+		fi
+		if [[ $current == "$stable" ]]; then
+			printf 'Ubuntu %s (%s) is already on the latest stable track\n' "$stable" "$stable_codename"
+			return 0
+		fi
+		if ((attempts == 6)); then
+			printf 'Too many Ubuntu release upgrades in one bootstrap; stopping\n' >&2
+			return 1
+		fi
+		if ! dpkg --compare-versions "$current" lt "$stable"; then
+			printf 'Ubuntu %s is newer than the known stable release %s; refusing to change tracks\n' "$current" "$stable" >&2
+			return 1
+		fi
+
+		release_args=()
+		if output=$(LC_ALL=C do-release-upgrade --check-dist-upgrade-only 2>&1); then
+			:
+		else
+			printf '%s\n' "$output"
+			if [[ $output != *'No new release found.'* ]]; then
+				printf 'Normal release check failed; not attempting another track\n' >&2
+				return 1
+			fi
+			# the development feed can contain an already-released stable version
+			# before the normal feed; only accept the known latest stable version.
+			if ! output=$(LC_ALL=C do-release-upgrade --check-dist-upgrade-only --devel-release 2>&1); then
+				printf '%s\n' "$output" >&2
+				return 1
+			fi
+			release_args=(--devel-release)
+		fi
+		printf '%s\n' "$output"
+		if [[ $output =~ New\ release\ \'([0-9]{2}\.[0-9]{2})(\.[0-9]+)?([^\']*)\'\ available\. ]]; then
+			candidate=${BASH_REMATCH[1]}
+		else
+			printf 'Could not identify the release offered by Ubuntu\n' >&2
+			return 1
+		fi
+		if ! dpkg --compare-versions "$candidate" gt "$current" ||
+			! dpkg --compare-versions "$candidate" le "$stable" ||
+			{ ((${#release_args[@]})) && [[ $candidate != "$stable" ]]; }; then
+			printf 'Refusing offered release %s; current is %s & latest stable is %s\n' "$candidate" "$current" "$stable" >&2
+			return 1
+		fi
+		printf 'Upgrading Ubuntu %s to %s\n' "$current" "$candidate"
+		sudo do-release-upgrade "${release_args[@]}" -f DistUpgradeViewNonInteractive || return 1
+		unset ID VERSION_ID
+		# shellcheck source=/dev/null
+		source "$release_file" || return 1
+		if [[ ${ID:-} != ubuntu || ${VERSION_ID:-} != "$candidate" ]]; then
+			printf 'Release upgrade did not reach the checked version %s; stopping bootstrap\n' "$candidate" >&2
+			return 1
+		fi
+		((attempts += 1))
+	done
+	printf 'Too many Ubuntu release upgrades in one bootstrap; stopping\n' >&2
+	return 1
+}
+
+upgrade_ubuntu /etc/os-release /etc/update-manager/release-upgrades || exit 1
 
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
