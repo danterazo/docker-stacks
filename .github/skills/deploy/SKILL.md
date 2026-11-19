@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Lite deployment of published Docker-stack changes: push existing committed main changes, then run dupull on selected running Docker guests. Use for routine /deploy requests that need command-success validation only, without healthchecks, APIs, webpages, or log inspection."
+description: "Lite deployment of published Docker-stack changes: push existing committed main changes, then run dupull on selected running Docker guests. Use for routine /deploy requests with bounded service and log checks, without broad unrelated diagnostics."
 argument-hint: "Optional: stack names or guest IDs, for example caddy or 100 200"
 user-invocable: true
 disable-model-invocation: true
@@ -60,10 +60,12 @@ this skill, not a Make target.
 6. Batch read-only checks by owner. For each guest confirm: the expected
    hostname; no tracked changes in `/docker`; a fast-forward to the target
    SHA is possible; `dante` reaches Docker; and no container is unhealthy,
-   restarting or exited (state from `docker ps` only). A failing guest is
-   preserved and skipped without pulling or cleaning; continue preflight for
-   the others. Report untracked files and leave them unless they collide
-   with incoming paths.
+   restarting or exited (state from `docker ps` only). For routine updates,
+   preserve and skip a failing guest without pulling or cleaning. If the user
+   explicitly requested repair of that service, inspect bounded logs and
+   continue only with an in-scope targeted remediation; leave unrelated
+   failures untouched. Report untracked files and leave them unless they
+   collide with incoming paths.
 7. New stack directory on a guest: as `dante` in `/docker`, inspect
    `core.sparseCheckout`, `core.sparseCheckoutCone` and
    `git sparse-checkout list`, and compare with the host profile in
@@ -84,8 +86,9 @@ AdGuard Home and Caddy stay staggered even in lite mode:
 3. Then the remaining secondaries, then primaries last, each only after the
    previous `dupull` exits successfully.
 
-Do not run DNS, API, healthcheck, webpage, browser, Caddy-route or log probes
-in this workflow.
+Keep probes scoped to selected services. Do not run unrelated DNS, API,
+webpage or browser diagnostics; follow the Caddy-specific route and browser
+checks in the network-services skill.
 
 ## Run
 
@@ -103,6 +106,8 @@ docker compose pull --ignore-buildable
 docker compose build --pull --no-cache
 docker compose up --build -d --remove-orphans
 ```
+
+```bash
 source /docker/_common/functions.sh
 declare -F dupull >/dev/null
 declare -F upgrade >/dev/null
@@ -130,8 +135,16 @@ pipe interactive commands or use pagers.
 ## Completion
 
 - Run targets sequentially with bounded output. Exit status 0 from `dupull`
-  completes a guest. No health, API, web, log or visual checks, and no mount,
-  NFS or write-access probes as gates.
+  confirms the command completed, not that the affected services are ready.
+- After each deployment, inspect the affected active stacks' Compose state and
+  bounded recent logs for startup errors. Keep output filtered and do not
+  expose secrets.
+- For first-time deployments, and whenever state or logs show a failure,
+  continue with app-specific readiness checks and safe, in-scope remediation.
+  Do not stop at reporting an error; stop only for a separate approval, a
+  material choice or a blocker outside the approved scope.
+- Do not probe unrelated stacks or run mount, NFS or write-access checks unless
+  the failure specifically points there.
 - On a nonzero exit or an explicit Git, package, image or Compose error, stop
   the rollout and report the guest, phase, exit status and skipped guests. No
   automatic retry or rollback.
