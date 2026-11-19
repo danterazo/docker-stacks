@@ -230,6 +230,9 @@ def stage_release(*, root: Path, archive: Path, checksum: str, image: str) -> Pa
         "docker",
         "run",
         "--rm",
+        "--name",
+        "dawarich-photon-extract",
+        "--no-healthcheck",
         "-i",
         "--network",
         "none",
@@ -249,7 +252,7 @@ def stage_release(*, root: Path, archive: Path, checksum: str, image: str) -> Pa
         EXTRACTOR,
         "/extract",
         "lbzip2",
-        "-n4",
+        f"-n{min(16, len(os.sched_getaffinity(0)))}",
         "-dc",
     )
     print(f"extracting into {partial}; the active index is untouched", flush=True)

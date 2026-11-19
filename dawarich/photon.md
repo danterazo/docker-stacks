@@ -36,6 +36,12 @@ links and unsafe paths, and checks all compressed streams before recording a
 completed release. MD5 detects corruption; HTTPS is the source-authentication
 boundary.
 
+Extraction uses up to 16 decompression threads, bounded by the owning node's
+CPU affinity. Its `dawarich-photon-extract` helper disables the serving image's
+healthcheck: it is not a running geocoder. Keep the launching terminal/session
+alive throughout the update; an interrupted run can leave an incomplete
+staging directory, which must not be activated.
+
 Only after extraction completes does it stop/recreate **Photon alone** and
 atomically select `current`. It waits for health and tests reverse geocoding.
 The app, PostgreSQL and Redis are not restarted. The wrapper's own updater is
