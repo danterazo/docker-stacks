@@ -32,9 +32,6 @@ services:
       dawarich-redis:
         condition: service_healthy
         restart: true
-      dawarich-geo:
-        condition: service_healthy
-        restart: true
     healthcheck:
       test: [CMD-SHELL, "wget -qO - http://127.0.0.1:3000/api/v1/health | grep -q '\"status\"\\s*:\\s*\"ok\"'"]
       interval: 10s
@@ -85,6 +82,8 @@ services:
   dawarich-geo:
     container_name: dawarich-geo
     image: rtuszik/photon-docker:${PHOTON_VERSION}
+    profiles:
+      - geocoding
     restart: unless-stopped
     environment:
       PUID: 1000
