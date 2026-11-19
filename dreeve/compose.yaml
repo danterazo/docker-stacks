@@ -4,9 +4,8 @@ x-dreeve: &dreeve
   env_file:
     - .env
     - .secrets
-  environment:
-    PUID: 1000
-    PGID: 1000
+  # no PUID/PGID: the entrypoint would recursively chown /var/www on every start, which takes
+  # hours of overlay copy-up in this LXC, and the app still runs as root afterwards
   volumes:
     - ./data/build/:/var/www/build/:rw
     - ./data/database/:/var/www/storage/database/:rw
