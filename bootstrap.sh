@@ -134,7 +134,7 @@ fi
 
 : 'INSTALL PACKAGES'
 sudo apt-get update &&
-	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release direnv lrzsz shfmt fastfetch || exit 1
+	sudo apt-get install -y tree ca-certificates coreutils curl git software-properties-common nfs-common iotop bash-completion lsb-release direnv lrzsz shfmt fastfetch rg || exit 1
 
 : 'INSTALL DOCKER'
 # add Docker's official GPG key
