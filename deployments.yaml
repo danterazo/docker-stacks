@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-11-18"
-  timestamp: "8:13:12 PM"
+  date: "2026-11-19"
+  timestamp: "2:39:54 AM"
 
 cluster:
   entrypoint:
@@ -29,9 +29,9 @@ docker_guests:
     tags: [docker, gpu, nas]
   103:
     hostname: upsnap
-    node: kex
+    node: cerulean
     address: 192.168.30.103
-    pool: dev
+    pool: prod
     type: lxc
     tags: [docker]
   104:
