@@ -75,6 +75,7 @@ four geocoding jobs instead of the embedded worker's default of one.
 The website's request-rate setting is separate and applies per process,
 not as a cluster-wide throughput guarantee. The worker's healthcheck
 requires a fresh Redis heartbeat from its own container.
+A three-minute startup grace allows Rails to cold-boot under storage load.
 
 Benchmark queue drain, database waits and host I/O pressure before raising
 these limits. Do not interrupt a full-history enqueue job to tune them:
