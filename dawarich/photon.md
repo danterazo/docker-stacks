@@ -61,6 +61,25 @@ not assumed to exist on Cerulean: prepare storage there and use the optional
 `--cache-dir` override, or revise the cache arrangement before migration.
 Do not silently download a planet archive into the host's OS filesystem.
 
+## Ingestion Workers
+
+The app retains four embedded workers for general processing. A separate
+`dawarich-worker` uses the image's standalone Sidekiq entrypoint and the
+queue-only [configuration](sidekiq-geocoding.yml) for reverse geocoding.
+The entrypoint does not forward command arguments, so queue selection must
+come from that mounted configuration rather than a Compose `command`.
+
+The worker has eight threads and ten database connections. Both processes
+explicitly set `REVERSE_GEOCODING_CONCURRENCY=4`, giving a shared maximum of
+four geocoding jobs instead of the embedded worker's default of one.
+The website's request-rate setting is separate and applies per process,
+not as a cluster-wide throughput guarantee. The worker's healthcheck
+requires a fresh Redis heartbeat from its own container.
+
+Benchmark queue drain, database waits and host I/O pressure before raising
+these limits. Do not interrupt a full-history enqueue job to tune them:
+allow it to finish so a retry does not enqueue the same history again.
+
 ## Optional Scheduling
 
 No cron job is installed. `--check` only reports the latest upstream release;

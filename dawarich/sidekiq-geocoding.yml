@@ -1,0 +1,5 @@
+---
+:concurrency: <%= ENV.fetch("BACKGROUND_PROCESSING_CONCURRENCY", 8) %>
+:timeout: 45
+:queues:
+  - reverse_geocoding

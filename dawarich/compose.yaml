@@ -15,6 +15,7 @@ services:
       SIDEKIQ_EMBEDDED: "true"
       WEB_CONCURRENCY: 0
       BACKGROUND_PROCESSING_CONCURRENCY: 4
+      REVERSE_GEOCODING_CONCURRENCY: 4
     ports:
       - ${LAN_BIND_ADDRESS:?Set the Dawarich guest LAN address}:3000:3000/tcp
     volumes:
@@ -38,6 +39,52 @@ services:
       interval: 10s
       retries: 30
       start_period: 30s
+      timeout: 10s
+
+  dawarich-worker:
+    container_name: dawarich-worker
+    image: freikin/dawarich:${DAWARICH_VERSION}
+    restart: unless-stopped
+    stop_grace_period: 60s
+    env_file:
+      - .env
+      - .secrets
+    environment:
+      PUID: 1000
+      PGID: 1000
+      SIDEKIQ_EMBEDDED: "false"
+      BACKGROUND_PROCESSING_CONCURRENCY: 8
+      RAILS_MAX_THREADS: 10
+      REVERSE_GEOCODING_CONCURRENCY: 4
+    volumes:
+      - ./data/public/:/var/app/public/:rw
+      - ./data/storage/:/var/app/storage/:rw
+      - ./data/imports/:/var/app/tmp/imports/:rw
+      - ./sidekiq-geocoding.yml:/var/app/config/sidekiq.yml:ro
+    networks:
+      - dawarich-net
+    entrypoint: sidekiq-entrypoint.sh
+    depends_on:
+      dawarich-db:
+        condition: service_healthy
+        restart: true
+      dawarich-redis:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bundle exec ruby -rredis -rsocket -e '
+          redis = Redis.new(url: ENV.fetch("REDIS_URL"), db: ENV.fetch("RAILS_JOB_QUEUE_DB", 1));
+          alive = redis.smembers("processes").any? { |key|
+            key.start_with?("#{Socket.gethostname}:") &&
+              redis.hget(key, "beat").to_f > Time.now.to_f - 60
+          };
+          abort("no fresh Sidekiq heartbeat for this container") unless alive'
+      interval: 30s
+      retries: 3
+      start_period: 60s
       timeout: 10s
 
   dawarich-redis:
