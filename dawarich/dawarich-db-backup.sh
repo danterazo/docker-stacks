@@ -14,7 +14,7 @@ backup_file="$backup_dir/dawarich-$(date +%Y-%m-%d_%H-%M-%S-%N).dump"
 temporary_file="$(mktemp "$backup_dir/.dawarich.XXXXXX")"
 trap 'rm -f -- "$temporary_file"' EXIT
 
-docker compose --project-directory "$stack_dir" -f "$stack_dir/compose.yaml" exec -T dawarich-db \
+docker compose --project-directory "$stack_dir" -f "$stack_dir/compose.yaml" exec -T --interactive=false dawarich-db \
 	sh -c 'exec pg_dump --format=custom --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"' >"$temporary_file"
 
 if [[ ! -s $temporary_file ]]; then
