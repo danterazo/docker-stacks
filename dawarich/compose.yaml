@@ -1,0 +1,116 @@
+name: dawarich
+
+services:
+  dawarich-app:
+    container_name: dawarich-app
+    image: freikin/dawarich:${DAWARICH_VERSION}
+    restart: unless-stopped
+    stop_grace_period: 60s
+    env_file:
+      - .env
+      - .secrets
+    environment:
+      PUID: 1000
+      PGID: 1000
+      SIDEKIQ_EMBEDDED: "true"
+      WEB_CONCURRENCY: 0
+      BACKGROUND_PROCESSING_CONCURRENCY: 2
+    ports:
+      - ${LAN_BIND_ADDRESS:?Set the Dawarich guest LAN address}:3000:3000/tcp
+    volumes:
+      - ./data/public/:/var/app/public/:rw
+      - ./data/storage/:/var/app/storage/:rw
+      - ./data/imports/:/var/app/tmp/imports/:rw
+    networks:
+      - dawarich-net
+    entrypoint: web-entrypoint.sh
+    command: [bin/rails, server, -p, "3000", -b, "::"]
+    depends_on:
+      dawarich-db:
+        condition: service_healthy
+        restart: true
+      dawarich-redis:
+        condition: service_healthy
+        restart: true
+      dawarich-geo:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO - http://127.0.0.1:3000/api/v1/health | grep -q '\"status\"\\s*:\\s*\"ok\"'"]
+      interval: 10s
+      retries: 30
+      start_period: 30s
+      timeout: 10s
+
+  dawarich-redis:
+    container_name: dawarich-redis
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes", --appendfsync, always]
+    networks:
+      - dawarich-net
+    volumes:
+      - ./data/redis/:/data/:rw
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli ping | grep -qx PONG"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  dawarich-db:
+    container_name: dawarich-db
+    image: postgis/postgis:17-3.5-alpine
+    restart: unless-stopped
+    shm_size: 1G
+    env_file:
+      - .env
+      - .secrets
+    volumes:
+      # require the recovery directory rather than silently creating a new cluster
+      - type: bind
+        source: ./data/postgres/
+        target: /var/lib/postgresql/data/
+        bind:
+          create_host_path: false
+    networks:
+      - dawarich-net
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  dawarich-geo:
+    container_name: dawarich-geo
+    image: rtuszik/photon-docker:${PHOTON_VERSION}
+    restart: unless-stopped
+    environment:
+      PUID: 1000
+      PGID: 1000
+      IMPORT_MODE: db
+      REGION: planet
+      INITIAL_DOWNLOAD: "FALSE"
+      UPDATE_STRATEGY: PARALLEL
+      UPDATE_INTERVAL: 720h
+      FORCE_UPDATE: "FALSE"
+      JAVA_PARAMS: -Xms2g -Xmx8g
+    volumes:
+      - ./data/photon/:/photon/data/:rw
+    networks:
+      - dawarich-net
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:2322/status]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10m
+
+networks:
+  dawarich-net:
+    name: dawarich-net
+
+x-dockge:
+  urls:
+    - https://track.samskeyti.net/
