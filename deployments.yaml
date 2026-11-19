@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-11-19"
-  timestamp: "2:39:54 AM"
+  timestamp: "3:42:59 AM"
 
 cluster:
   entrypoint:
@@ -83,6 +83,13 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker, nas, vpn]
+  118:
+    hostname: dawarich
+    node: kex
+    address: 192.168.30.118
+    pool: prod
+    type: lxc
+    tags: [docker]
   120:
     hostname: plex-music
     node: kex
