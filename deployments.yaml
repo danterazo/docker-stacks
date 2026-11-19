@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-10-29"
-  timestamp: "11:07:43 PM"
+  date: "2026-11-18"
+  timestamp: "8:13:12 PM"
 
 cluster:
   entrypoint:
@@ -20,13 +20,6 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker, security]
-  101:
-    hostname: nvidia-vm
-    node: kex
-    address: 192.168.30.101
-    pool: prod
-    type: qemu
-    tags: [deprecated, docker, gpu, nas]
   102:
     hostname: immich
     node: kex
