@@ -100,18 +100,21 @@ services:
     profiles:
       - geocoding
     restart: unless-stopped
+    user: 1000:1000
+    stop_grace_period: 120s
     environment:
-      PUID: 1000
-      PGID: 1000
       IMPORT_MODE: db
       REGION: planet
       INITIAL_DOWNLOAD: "FALSE"
-      UPDATE_STRATEGY: PARALLEL
-      UPDATE_INTERVAL: 720h
+      UPDATE_STRATEGY: DISABLED
       FORCE_UPDATE: "FALSE"
       JAVA_PARAMS: -Xms2g -Xmx8g
     volumes:
-      - ./data/photon/:/photon/data/:rw
+      - type: bind
+        source: ./data/photon/current/
+        target: /photon/data/
+        bind:
+          create_host_path: false
     networks:
       - dawarich-net
     healthcheck:
