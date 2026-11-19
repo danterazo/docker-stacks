@@ -12,11 +12,6 @@ import sites/*.conf
 *.samskeyti.net {
 	import common
 
-	#	@books host books.samskeyti.net
-	#	handle @books {
-	#		reverse_proxy http://192.168.30.101:8083
-	#	}
-
 	#	@dav host dav.samskeyti.net
 	#	handle @dav {
 	#		reverse_proxy http://192.168.30.101:5232
