@@ -1,5 +1,19 @@
 # Radeon VM GPU Readiness
 
+## Power-Tuning Runtime Refresh: 2026-11-22
+
+The current guest exposes a verified 120–250 W range on both installed V620s,
+and writes/readback at multiple caps have succeeded during inference testing.
+The enabled boot service starts at 120 W. This supersedes the earlier stock
+driver's 250–250 W observations below; it does not establish the current boot
+module's signing/provenance. The benchmark restores its starting caps on exit.
+See [`powercap-benchmark.md`](powercap-benchmark.md) for the measurement workflow,
+dynamic-cap trials, concurrent-request tests, and four-card planning limits.
+The completed measurements and unresolved BMC cooling-control fault are in
+[`v620-power-tuning-results.md`](v620-power-tuning-results.md). Only the short
+single-request sweep completed; dynamic and concurrency performance was not
+measured. At the user's request, testing stopped and both caps remain 120 W.
+
 ## Boot Safety and Host Staging: 2026-11-22
 
 - After an earlier assistant incorrectly instructed installation of an
