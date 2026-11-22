@@ -12,6 +12,17 @@ alias sc="sudo cat"
 alias rm-empty-dirs="sudo find . -type d -empty -print -delete"
 alias ramdisk="mkdir -p /tmp/ramdisk && cd /tmp/ramdisk && ls -al"
 
+# Radeon VM: show power caps without sudo, apply requested caps with sudo.
+if [[ ${HOSTNAME%%.*} == radeon-vm ]]; then
+	amd-cap() {
+		if (($# == 0)); then
+			bash /scripts/hardware/amd-cap.sh
+		else
+			sudo /usr/bin/bash /scripts/hardware/amd-cap.sh "$@"
+		fi
+	}
+fi
+
 : 'Directory Listings & Disk Usage'
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
