@@ -1,0 +1,15 @@
+[Unit]
+Description=Protect Radeon GPU cooling if VM 105 stops responding
+After=network-online.target pvedaemon.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+LoadCredential=bmc.json:/etc/amdfan/bmc.json
+ExecStart=/usr/bin/python3 /usr/local/lib/amdfan/amdfan.py host-watchdog
+ExecStopPost=/usr/bin/python3 /usr/local/lib/amdfan/amdfan.py emergency
+Restart=no
+WatchdogSec=60
+
+[Install]
+WantedBy=multi-user.target

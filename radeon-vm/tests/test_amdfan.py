@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Exercise the non-actuating fan-profile prototype with fake sysfs data."""
+"""Exercise GPU fan control with fake sysfs and a fake BMC."""
 
+import contextlib
 import importlib.util
-import os
-import subprocess
+import io
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE = Path(__file__).resolve().parents[1] / 'bin' / 'amdfan.py'
@@ -79,10 +81,17 @@ class FanTests(unittest.TestCase):
 		self.assertIn('error', result)
 
 	def test_cli_quiet_sets_only_the_test_profile(self):
-		env = dict(os.environ, XDG_STATE_HOME=str(self.root / 'cli-state'))
-		result = subprocess.run([sys.executable, '-B', str(MODULE), 'quiet'], env=env, capture_output=True, text=True, check=True)
-		self.assertIn('simulation only', result.stdout)
-		self.assertEqual((self.root / 'cli-state' / 'amdfan' / 'profile').read_text(), 'quiet\n')
+		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 10, 'updated_monotonic': float('inf')}
+		out = io.StringIO()
+		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'profile_path', return_value=self.state), mock.patch.object(amdfan, 'read_status', return_value=state), contextlib.redirect_stdout(out):
+			self.assertEqual(amdfan.main(), 0)
+		self.assertIn('quiet active', out.getvalue())
+		self.assertEqual(self.state.read_text(), 'quiet\n')
+
+	def test_cli_refuses_profile_change_when_service_unavailable(self):
+		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'profile_path', return_value=self.state), mock.patch.object(amdfan, 'read_status', return_value=None), contextlib.redirect_stderr(io.StringIO()):
+			self.assertEqual(amdfan.main(), 1)
+		self.assertFalse(self.state.exists())
 
 	def test_cooldown_rate_and_full_speed(self):
 		gpus = amdfan.read_gpus(root=self.hwmon)
@@ -107,6 +116,204 @@ class FanTests(unittest.TestCase):
 		self.assertEqual(bmc.zones[2], [0, 10, 20, 10, 65, 10, 70, 10, 100, 100])
 		with self.assertRaises(ValueError):
 			amdfan.draft_bmc_curve(duty=101)
+
+	def test_bmc_authentication_and_verified_writes(self):
+		class Response(io.BytesIO):
+			def __enter__(self):
+				return self
+
+			def __exit__(self, *_args):
+				self.close()
+
+		class FakeTransport:
+			def __init__(self):
+				self.mode = 0
+				self.points = [0, 20, 20, 20, 65, 20, 70, 20, 100, 100]
+				self.headers = []
+
+			def open(self, request, timeout):
+				self.assert_timeout(timeout)
+				path = request.full_url.removeprefix(amdfan.BMC_URL)
+				self.headers.append(dict(request.header_items()))
+				if path == '/api/session':
+					data = {'ok': 0, 'CSRFToken': 'test-token'}
+				elif path == '/api/fanctrl/PWM':
+					if request.method == 'PUT':
+						body = json.loads(request.data)
+						self.points = body['CurrentPWMdata']
+						self.mode = 4
+					data = [{}, {}, {'PWMName': 'Zone3(CHA_FAN 2)', 'CurrentPWMdata': [{'Temp': self.points[i], 'Duty': self.points[i + 1]} for i in range(0, 10, 2)]}]
+				elif path == '/api/fanctrl/mode':
+					if request.method == 'PUT':
+						self.mode = json.loads(request.data)['FanMode']
+					data = {'FanMode': self.mode}
+				else:
+					raise AssertionError(path)
+				return Response(json.dumps(data).encode())
+
+			@staticmethod
+			def assert_timeout(timeout):
+				if timeout != 5:
+					raise AssertionError('missing bounded timeout')
+
+		transport = FakeTransport()
+		client = amdfan.BmcClient(username='test-user', password='test-password', opener=transport)
+		client.login()
+		client.set_duty(duty=10)
+		self.assertEqual(transport.points, [0, 10, 20, 10, 65, 10, 70, 10, 100, 100])
+		self.assertEqual(transport.mode, 4)
+		self.assertEqual(transport.headers[1]['X-csrftoken'], 'test-token')
+		client.full_speed()
+		self.assertEqual(transport.mode, 3)
+
+	def test_bmc_refuses_write_for_unexpected_zone(self):
+		client = mock.Mock()
+		client.request.return_value = [{}, {}, {'PWMName': 'wrong header'}]
+		with self.assertRaises(amdfan.BmcError):
+			amdfan.BmcClient.set_duty(client, duty=10)
+		self.assertEqual(client.request.call_count, 1)
+
+	def test_monitor_requests_full_speed_when_sensor_missing(self):
+		class FakeBMC:
+			def __init__(self):
+				self.full = 0
+
+			def login(self):
+				pass
+
+			def request(self, **_kwargs):
+				return {'FanMode': 0}
+
+			def full_speed(self):
+				self.full += 1
+
+		(self.hwmon / 'hwmon1' / 'temp2_input').unlink()
+		client = FakeBMC()
+		with mock.patch.object(amdfan.signal, 'signal'):
+			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(result, 1)
+		self.assertEqual(client.full, 1)
+		self.assertFalse(json.loads((self.root / 'status.json').read_text())['control_enabled'])
+
+	def test_monitor_does_not_override_external_full_speed(self):
+		class FakeBMC:
+			def __init__(self):
+				self.duties = []
+				self.full = 0
+
+			def login(self):
+				pass
+
+			def request(self, **_kwargs):
+				return {'FanMode': 0}
+
+			def set_duty(self, *, duty):
+				self.duties.append(duty)
+
+			def verify_duty(self, *, duty):
+				raise amdfan.BmcError('external full-speed override')
+
+			def full_speed(self):
+				self.full += 1
+
+		client = FakeBMC()
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', return_value=None):
+			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(result, 1)
+		self.assertEqual(len(client.duties), 1)
+		self.assertEqual(client.full, 1)
+
+	def test_monitor_falls_back_after_unexpected_exit(self):
+		class FakeBMC:
+			def __init__(self):
+				self.duties = []
+				self.full = 0
+
+			def login(self):
+				pass
+
+			def request(self, **_kwargs):
+				return {'FanMode': 0}
+
+			def set_duty(self, *, duty):
+				self.duties.append(duty)
+
+			def full_speed(self):
+				self.full += 1
+
+		client = FakeBMC()
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=KeyboardInterrupt):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(len(client.duties), 1)
+		self.assertEqual(client.full, 1)
+
+	def test_full_speed_at_start_waits_for_new_profile_request(self):
+		class FakeBMC:
+			def __init__(self):
+				self.duties = []
+				self.full = 0
+
+			def login(self):
+				pass
+
+			def request(self, **_kwargs):
+				return {'FanMode': 3}
+
+			def set_duty(self, *, duty):
+				self.duties.append(duty)
+
+			def full_speed(self):
+				self.full += 1
+
+		client = FakeBMC()
+		revisions = [(1, 1, 1), (1, 1, 1), (1, 2, 2)]
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan, 'profile_revision', side_effect=revisions), mock.patch.object(amdfan.time, 'sleep', side_effect=[None, KeyboardInterrupt]):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(len(client.duties), 1)
+		self.assertEqual(client.full, 1)
+
+	def test_full_speed_override_is_verified(self):
+		client = mock.Mock()
+		client.request.side_effect = [{}, {'FanMode': 0}]
+		with self.assertRaises(amdfan.BmcError):
+			amdfan.BmcClient.full_speed(client)
+		client.request.assert_any_call(path='/api/fanctrl/mode', method='PUT', body={'FanMode': 3})
+
+	def test_host_watchdog_waits_for_three_failures_and_never_resumes_quiet(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 4}
+		guard = amdfan.HostWatchdog(client=client)
+		guard.check(healthy=False)
+		guard.check(healthy=False)
+		client.full_speed.assert_not_called()
+		guard.check(healthy=True)
+		guard.check(healthy=False)
+		guard.check(healthy=False)
+		client.full_speed.assert_not_called()
+		guard.check(healthy=False)
+		client.full_speed.assert_called_once()
+		client.request.return_value = {'FanMode': 3}
+		guard.check(healthy=False)
+		guard.check(healthy=True)
+		client.full_speed.assert_called_once()
+
+	def test_host_watchdog_reports_bmc_failure_without_switching_quiet(self):
+		client = mock.Mock()
+		client.login.side_effect = amdfan.BmcError('connection failed')
+		guard = amdfan.HostWatchdog(client=client)
+		for _ in range(3):
+			guard.check(healthy=False)
+		client.full_speed.assert_not_called()
+		self.assertFalse(guard.logged_in)
+
+	def test_host_watchdog_does_not_report_ready_without_bmc_auth(self):
+		client = mock.Mock()
+		client.login.side_effect = amdfan.BmcError('authentication failed')
+		with mock.patch.object(amdfan.os, 'geteuid', return_value=0), mock.patch.object(amdfan.socket, 'gethostname', return_value='kveikur'), mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan, 'notify') as notify:
+			self.assertEqual(amdfan.run_host_watchdog(client=client), 1)
+			notify.assert_not_called()
 
 
 if __name__ == '__main__':

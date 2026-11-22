@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""Prototype GPU fan profile selection and monitoring; never writes to the BMC."""
+"""Control the GPU fan hub using Radeon temperatures and the ASUS BMC."""
 
 import argparse
+import http.cookiejar
 import json
 import logging
 import os
 import signal
+import socket
+import subprocess
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
-# provisional points for simulation only, not validated under GPU load
+# preliminary points: verify fan operation and thermals under load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
 	'quiet': [(0, 10), (40, 10), (50, 20), (60, 35), (70, 60), (80, 100)],
 	'balanced': [(0, 20), (40, 20), (50, 35), (60, 55), (70, 80), (80, 100)],
@@ -25,11 +31,106 @@ GPU_DEVICE = '0x73a1'
 INTERVAL_SECONDS = 5
 MAX_COOLDOWN_STEP_C = 3
 DEFAULT_PROFILE = 'balanced'
+BMC_URL = 'https://kveikur.samskeyti.net'
+STATUS_PATH = Path('/run/amdfan/status.json')
+CREDENTIAL_NAME = 'bmc.json'
+FULL_SPEED_MODE = 3
+CUSTOM_MODE = 4
+MAX_UPDATE_DELAY_SECONDS = 20
+MIN_DUTY_CHANGE = 3
+HOST_POLL_SECONDS = 10
+HOST_FAILURE_LIMIT = 3
 LOG = logging.getLogger('amdfan')
 
 
 class SensorError(Exception):
 	"""An expected GPU or temperature reading is unavailable."""
+
+
+class BmcError(Exception):
+	"""The BMC request or its verification failed."""
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+	def redirect_request(self, req, fp, code, msg, headers, newurl):
+		raise BmcError('BMC redirect refused')
+
+
+class BmcClient:
+	def __init__(self, *, username: str, password: str, opener=None):
+		self.username = username
+		self.password = password
+		self.csrf: Optional[str] = None
+		self.opener = opener or urllib.request.build_opener(
+			NoRedirect(), urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+		)
+
+	def request(self, *, path: str, method: str = 'GET', body: Optional[dict] = None) -> Any:
+		headers = {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+		if self.csrf:
+			headers['X-CSRFTOKEN'] = self.csrf
+		data = None
+		if body is not None:
+			if path == '/api/session':
+				data = urllib.parse.urlencode(body).encode()
+				headers['Content-Type'] = 'application/x-www-form-urlencoded'
+			else:
+				data = json.dumps(body).encode()
+				headers['Content-Type'] = 'application/json'
+		request = urllib.request.Request(BMC_URL + path, data=data, headers=headers, method=method)
+		try:
+			with self.opener.open(request, timeout=5) as response:
+				return json.load(response)
+		except (OSError, ValueError, urllib.error.URLError) as exc:
+			# never log request bodies, response bodies, tokens or passwords
+			raise BmcError(f'BMC {method} {path} failed') from exc
+
+	def login(self) -> None:
+		self.csrf = None
+		response = self.request(path='/api/session', method='POST', body={'username': self.username, 'password': self.password})
+		if not isinstance(response, dict) or response.get('ok') != 0 or not isinstance(response.get('CSRFToken'), str) or not response['CSRFToken']:
+			raise BmcError('BMC login failed')
+		self.csrf = response['CSRFToken']
+
+	def verify_duty(self, *, duty: int) -> None:
+		zones = self.request(path='/api/fanctrl/PWM')
+		if not isinstance(zones, list) or len(zones) < 3 or not isinstance(zones[2], dict) or zones[2].get('PWMName') != 'Zone3(CHA_FAN 2)':
+			raise BmcError('BMC fan zone does not match CHA_FAN2')
+		payload = draft_bmc_curve(duty=duty)
+		mode = self.request(path='/api/fanctrl/mode')
+		try:
+			actual = [int(value) for point in zones[2]['CurrentPWMdata'] for value in (point['Temp'], point['Duty'])]
+		except (KeyError, IndexError, TypeError, ValueError) as exc:
+			raise BmcError('BMC fan curve readback invalid') from exc
+		if actual != payload['CurrentPWMdata'] or not isinstance(mode, dict) or mode.get('FanMode') != CUSTOM_MODE:
+			raise BmcError('BMC fan curve or mode readback mismatch')
+
+	def set_duty(self, *, duty: int) -> None:
+		zones = self.request(path='/api/fanctrl/PWM')
+		if not isinstance(zones, list) or len(zones) < 3 or not isinstance(zones[2], dict) or zones[2].get('PWMName') != 'Zone3(CHA_FAN 2)':
+			raise BmcError('BMC fan zone does not match CHA_FAN2')
+		self.request(path='/api/fanctrl/PWM', method='PUT', body=draft_bmc_curve(duty=duty))
+		self.verify_duty(duty=duty)
+
+	def full_speed(self) -> None:
+		self.request(path='/api/fanctrl/mode', method='PUT', body={'FanMode': FULL_SPEED_MODE})
+		mode = self.request(path='/api/fanctrl/mode')
+		if not isinstance(mode, dict) or mode.get('FanMode') != FULL_SPEED_MODE:
+			raise BmcError('BMC full-speed mode readback mismatch')
+
+
+def bmc_from_credential() -> BmcClient:
+	directory = os.environ.get('CREDENTIALS_DIRECTORY')
+	if not directory:
+		raise BmcError('systemd BMC credential is unavailable')
+	try:
+		data = json.loads((Path(directory) / CREDENTIAL_NAME).read_text(encoding='utf-8'))
+		username, password = data['username'], data['password']
+		if not isinstance(username, str) or not username or not isinstance(password, str) or not password:
+			raise ValueError('invalid credential')
+		return BmcClient(username=username, password=password)
+	except (OSError, ValueError, KeyError, TypeError) as exc:
+		raise BmcError('cannot load BMC credential') from exc
 
 
 def profile_path() -> Path:
@@ -45,6 +146,14 @@ def read_profile(*, path: Path) -> str:
 	if name not in PROFILES:
 		raise ValueError('invalid saved profile')
 	return name
+
+
+def profile_revision(*, path: Path) -> Optional[Tuple[int, int, int]]:
+	try:
+		info = path.stat()
+		return (info.st_dev, info.st_ino, info.st_mtime_ns)
+	except FileNotFoundError:
+		return None
 
 
 def select_profile(*, path: Path, name: str) -> None:
@@ -144,26 +253,42 @@ def sample(*, path: Path, root: Path, previous_temperature_c: Optional[float] = 
 		return {'control_enabled': False, 'error': str(exc), 'proposed_duty_percent': 100}
 
 
-def main() -> int:
-	parser = argparse.ArgumentParser(description='simulate GPU fan profiles; does not control hardware')
-	parser.add_argument('command', choices=(*PROFILES, 'status', 'monitor'))
-	args = parser.parse_args()
-	path = profile_path()
-	if args.command in PROFILES:
-		try:
-			select_profile(path=path, name=args.command)
-		except (OSError, ValueError) as exc:
-			print(f'profile not saved: {exc}', file=sys.stderr)
-			return 1
-		print(f'{args.command} selected; simulation only, BMC fan settings unchanged')
-		return 0
-	root = Path('/sys/class/hwmon')
-	if args.command == 'status':
-		result = sample(path=path, root=root)
-		print(json.dumps(result, indent=2))
-		return 1 if 'error' in result else 0
-	logging.basicConfig(level=logging.INFO, format='%(message)s')
-	LOG.warning('simulation only; BMC fan settings will not be changed')
+def notify(*, message: str) -> None:
+	address = os.environ.get('NOTIFY_SOCKET')
+	if not address:
+		return
+	if address.startswith('@'):
+		address = '\0' + address[1:]
+	with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as sock:
+		sock.connect(address)
+		sock.sendall(message.encode())
+
+
+def write_status(*, path: Path, result: dict) -> None:
+	path.parent.mkdir(parents=True, exist_ok=True)
+	temp = path.with_name(f'.status-{os.getpid()}')
+	try:
+		with temp.open('x', encoding='utf-8') as stream:
+			json.dump(dict(result, updated_monotonic=time.monotonic()), stream)
+			stream.write('\n')
+		os.replace(temp, path)
+	finally:
+		if temp.exists():
+			temp.unlink()
+
+
+def read_status(*, path: Path) -> Optional[dict]:
+	try:
+		result = json.loads(path.read_text(encoding='utf-8'))
+		age = time.monotonic() - float(result['updated_monotonic'])
+		if age < 0 or age > 30:
+			return None
+		return result
+	except (OSError, KeyError, TypeError, ValueError):
+		return None
+
+
+def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient) -> int:
 	stopping = False
 
 	def stop(_signum: int, _frame: object) -> None:
@@ -173,13 +298,180 @@ def main() -> int:
 	signal.signal(signal.SIGTERM, stop)
 	signal.signal(signal.SIGINT, stop)
 	previous: Optional[float] = None
+	last_duty: Optional[int] = None
+	last_profile: Optional[str] = None
+	last_write = 0.0
+	try:
+		client.login()
+		mode = client.request(path='/api/fanctrl/mode')
+		if not isinstance(mode, dict) or mode.get('FanMode') not in (0, FULL_SPEED_MODE, CUSTOM_MODE):
+			raise BmcError('BMC fan mode is unavailable or unsupported')
+		paused = mode['FanMode'] == FULL_SPEED_MODE
+		initial_revision = profile_revision(path=path)
+		notify(message='READY=1')
+		while not stopping:
+			if paused:
+				if profile_revision(path=path) == initial_revision:
+					write_status(path=status_path, result={'service_ready': True, 'control_enabled': False, 'error': 'BMC is in full-speed mode; select a profile to resume'})
+					notify(message='WATCHDOG=1')
+					time.sleep(INTERVAL_SECONDS)
+					continue
+				paused = False
+			result = sample(path=path, root=root, previous_temperature_c=previous)
+			if 'error' in result:
+				raise SensorError(result['error'])
+			if stopping:
+				break
+			previous = result['control_c']
+			duty = result['proposed_duty_percent']
+			now = time.monotonic()
+			if last_duty is not None:
+				client.verify_duty(duty=last_duty)
+			if last_duty is None or result['profile'] != last_profile or duty >= last_duty + MIN_DUTY_CHANGE or (duty <= last_duty - MIN_DUTY_CHANGE and now - last_write >= MAX_UPDATE_DELAY_SECONDS):
+				client.set_duty(duty=duty)
+				last_duty, last_profile, last_write = duty, result['profile'], now
+			result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty)
+			write_status(path=status_path, result=result)
+			notify(message='WATCHDOG=1')
+			if not stopping:
+				time.sleep(INTERVAL_SECONDS)
+		return 0
+	except (BmcError, SensorError, OSError, ValueError) as exc:
+		LOG.error('fan control stopped: %s', exc)
+		try:
+			write_status(path=status_path, result={'control_enabled': False, 'error': str(exc)})
+		except OSError:
+			LOG.error('could not write fan-control status')
+		return 1
+	finally:
+		try:
+			write_status(path=status_path, result={'control_enabled': False, 'error': 'fan controller stopped'})
+		except OSError:
+			LOG.error('could not mark fan control inactive')
+		try:
+			client.full_speed()
+			LOG.warning('BMC full-speed mode confirmed')
+		except BmcError:
+			try:
+				client.login()
+				client.full_speed()
+				LOG.warning('BMC full-speed mode confirmed after reconnecting')
+			except BmcError:
+				LOG.critical('could not set BMC full-speed mode; verify cooling immediately')
+
+
+def guest_agent_responds() -> bool:
+	try:
+		result = subprocess.run(['/usr/sbin/qm', 'agent', '105', 'ping'], capture_output=True, timeout=7, check=False)
+		return result.returncode == 0
+	except (OSError, subprocess.TimeoutExpired):
+		return False
+
+
+class HostWatchdog:
+	def __init__(self, *, client: BmcClient):
+		self.client = client
+		self.failures = 0
+		self.logged_in = False
+
+	def check(self, *, healthy: bool) -> None:
+		if healthy:
+			self.failures = 0
+			return
+		self.failures += 1
+		if self.failures < HOST_FAILURE_LIMIT:
+			return
+		try:
+			if not self.logged_in:
+				self.client.login()
+				self.logged_in = True
+			mode = self.client.request(path='/api/fanctrl/mode')
+			if not isinstance(mode, dict) or mode.get('FanMode') != FULL_SPEED_MODE:
+				self.client.full_speed()
+				LOG.warning('VM guest agent unavailable; BMC full-speed mode confirmed')
+		except BmcError:
+			self.logged_in = False
+			LOG.critical('VM guest agent and BMC control unavailable; verify cooling immediately')
+
+
+def run_host_watchdog(*, client: BmcClient) -> int:
+	if os.geteuid() != 0 or socket.gethostname().split('.')[0] != 'kveikur':
+		LOG.error('host watchdog must run as root on kveikur')
+		return 1
+	stopping = False
+
+	def stop(_signum: int, _frame: object) -> None:
+		nonlocal stopping
+		stopping = True
+
+	signal.signal(signal.SIGTERM, stop)
+	signal.signal(signal.SIGINT, stop)
+	watchdog = HostWatchdog(client=client)
+	try:
+		client.login()
+		mode = client.request(path='/api/fanctrl/mode')
+		if not isinstance(mode, dict) or not isinstance(mode.get('FanMode'), int):
+			raise BmcError('BMC fan mode unavailable')
+		watchdog.logged_in = True
+	except BmcError as exc:
+		LOG.critical('host watchdog could not authenticate to BMC: %s', exc)
+		return 1
+	notify(message='READY=1')
 	while not stopping:
-		result = sample(path=path, root=root, previous_temperature_c=previous)
-		previous = result.get('control_c')
-		LOG.info(json.dumps(result, sort_keys=True))
+		watchdog.check(healthy=guest_agent_responds())
+		notify(message='WATCHDOG=1')
 		if not stopping:
-			time.sleep(INTERVAL_SECONDS)
+			time.sleep(HOST_POLL_SECONDS)
 	return 0
+
+
+def main() -> int:
+	parser = argparse.ArgumentParser(description='control the Radeon GPU fan hub')
+	parser.add_argument('command', choices=(*PROFILES, 'status', 'monitor', 'host-watchdog', 'emergency'))
+	args = parser.parse_args()
+	path = profile_path()
+	if args.command in PROFILES:
+		current = read_status(path=STATUS_PATH)
+		if not current or not current.get('service_ready'):
+			print('fan service is unavailable; profile was not changed', file=sys.stderr)
+			return 1
+		requested_at = time.monotonic()
+		try:
+			select_profile(path=path, name=args.command)
+		except (OSError, ValueError) as exc:
+			print(f'profile not saved: {exc}', file=sys.stderr)
+			return 1
+		deadline = time.monotonic() + 25
+		while time.monotonic() < deadline:
+			current = read_status(path=STATUS_PATH)
+			if current and current.get('control_enabled') and current.get('profile') == args.command and current['updated_monotonic'] >= requested_at:
+				print(f"{args.command} active; BMC requested duty {current['verified_requested_duty_percent']}%")
+				return 0
+			time.sleep(1)
+		print(f'{args.command} saved, but the service did not confirm application', file=sys.stderr)
+		return 1
+	root = Path('/sys/class/hwmon')
+	if args.command == 'status':
+		result = sample(path=path, root=root)
+		current = read_status(path=STATUS_PATH)
+		result['service'] = current or {'control_enabled': False, 'error': 'service status unavailable or stale'}
+		result['control_enabled'] = bool(current and current.get('control_enabled'))
+		print(json.dumps(result, indent=2))
+		return 1 if 'error' in result or not result['control_enabled'] else 0
+	logging.basicConfig(level=logging.INFO, format='%(message)s')
+	try:
+		client = bmc_from_credential()
+		if args.command == 'emergency':
+			client.login()
+			client.full_speed()
+			LOG.warning('BMC full-speed mode confirmed')
+			return 0
+		if args.command == 'host-watchdog':
+			return run_host_watchdog(client=client)
+		return run_monitor(path=path, root=root, status_path=STATUS_PATH, client=client)
+	except BmcError as exc:
+		LOG.error('%s', exc)
+		return 1
 
 
 if __name__ == '__main__':
