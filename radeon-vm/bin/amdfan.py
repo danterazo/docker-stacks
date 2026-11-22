@@ -18,11 +18,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-# preliminary points: verify fan operation and thermals under load
+# provisional points use the hottest edge, junction or memory sensor in Celsius
+# verify every blower starts at the minimum duty and validate under sustained load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
-	'quiet': [(0, 10), (40, 10), (50, 20), (60, 35), (70, 60), (80, 100)],
-	'balanced': [(0, 20), (40, 20), (50, 35), (60, 55), (70, 80), (80, 100)],
-	'performance': [(0, 40), (40, 40), (50, 55), (60, 75), (70, 100)],
+	'quiet': [(0, 20), (50, 20), (60, 25), (70, 35), (75, 50), (80, 75), (85, 100)],
+	'balanced': [(0, 30), (45, 30), (55, 40), (65, 60), (75, 85), (80, 100)],
+	'performance': [(0, 45), (40, 45), (50, 60), (60, 80), (70, 100)],
 }
 EXPECTED_GPUS = 2
 REQUIRED_LABELS = ('edge', 'junction', 'mem')
