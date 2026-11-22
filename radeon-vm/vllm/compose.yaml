@@ -50,6 +50,10 @@ services:
       - --disable-custom-all-reduce
       - --language-model-only
       - --skip-mm-profiling
+      # The current Qwen checkpoint emits Qwen3-Coder-style XML tool calls.
+      - --enable-auto-tool-choice
+      - --tool-call-parser
+      - ${VLLM_TOOL_CALL_PARSER:-qwen3_xml}
     healthcheck:
       test:
         - CMD

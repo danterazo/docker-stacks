@@ -76,3 +76,9 @@ model supports that parallelism, run an inference test, and verify VRAM usage
 on every card. Benchmark P2P and
 all-reduce separately before enabling them. Cards currently expose 250 W
 stock caps; do not assume the previous 180 W power target is active.
+
+Automatic tool choice is enabled with the `qwen3_xml` parser, matching the
+current checkpoint's XML tool-call template. When changing models, set
+`VLLM_TOOL_CALL_PARSER` in `.env` to a parser compatible with the new model's
+chat template before recreating the service. These are server settings and
+apply to all clients; OpenCode's `--auto` controls permission approval instead.
