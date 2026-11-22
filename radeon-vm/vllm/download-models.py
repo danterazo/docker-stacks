@@ -5,6 +5,9 @@
 # the current main branch is used. Hugging Face model URLs are also accepted.
 MODELS = [
 	'btbtyler09/Qwen3.8-27B-GPTQ-4bit@b64f44dfedb71b73287219e0ec348b0a20c447e2',
+	'google/gemma-4-31B-it-qat-w4a16-ct@52f3f65bc7a02d555763bc923bd1d9094898219d',
+	'ibm-granite/granite-4.2-30b@9e668ce1c538387ef24d3644e9b0606647762636',
+	'microsoft/Phi-4-reasoning-plus@69baf8528e1bcf05f475034d9e5dd32875ed125f',
 ]
 
 import fcntl
