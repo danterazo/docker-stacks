@@ -48,6 +48,15 @@ class ModelTests(unittest.TestCase):
 			self.assertEqual(download.call_count, 2)
 		self.assertTrue((self.root / 'language-models/hf_safetensors/org/one/config.json').is_file())
 
+	def test_direct_model_root_layout(self):
+		def fake_download(root, repo, sha, partial):
+			populate(partial)
+		with mock.patch.object(manager, 'model_info', return_value=(SHA, FILES)), \
+				mock.patch.object(manager, 'download', side_effect=fake_download) as download:
+			manager.manage(self.root, ['org/one'], model_subdir=Path('.'))
+			download.assert_called_once()
+		self.assertTrue((self.root / 'org/one/config.json').is_file())
+
 	def test_incomplete_existing_never_overwritten(self):
 		target = self.root / 'language-models/hf_safetensors/org/one'
 		populate(target)
@@ -75,6 +84,17 @@ class ModelTests(unittest.TestCase):
 				mock.patch('os.path.ismount', return_value=False):
 			with self.assertRaises(ValueError):
 				manager.main()
+
+	def test_main_supports_a_mounted_direct_model_root(self):
+		def fake_download(root, repo, sha, partial):
+			populate(partial)
+		with mock.patch.dict('os.environ', {'VLLM_MODEL_ROOT': str(self.root)}), \
+				mock.patch('os.path.ismount', return_value=True), \
+				mock.patch.object(manager, 'MODELS', ['org/one']), \
+				mock.patch.object(manager, 'model_info', return_value=(SHA, FILES)), \
+				mock.patch.object(manager, 'download', side_effect=fake_download):
+			manager.main()
+		self.assertTrue((self.root / 'org/one/config.json').is_file())
 
 
 if __name__ == '__main__':
