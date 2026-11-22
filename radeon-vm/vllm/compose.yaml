@@ -43,6 +43,8 @@ services:
       - --max-num-seqs
       - "5"
       - --enable-prefix-caching
+      - --speculative-config
+      - '{"method":"mtp","num_speculative_tokens":2,"draft_sample_method":"probabilistic"}'
       - --gpu-memory-utilization
       - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
       - --kv-cache-dtype
