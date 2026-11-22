@@ -1,0 +1,59 @@
+services:
+  llama-cpp:
+    image: radeon-llama-cpp:rdna2-e194cbdd
+    build:
+      context: .
+      args:
+        BUILD_JOBS: ${BUILD_JOBS:-1}
+    container_name: radeon-llama-cpp
+    user: "${LLAMA_UID:-1000}:${LLAMA_GID:-1000}"
+    group_add:
+      - "${VIDEO_GID:-44}"
+      - "${RENDER_GID:-991}"
+    init: true
+    # Opt-in only: never start on boot or restart after a failed experiment.
+    restart: "no"
+    environment:
+      HSA_OVERRIDE_GFX_VERSION: "10.3.0"
+      HSA_NO_SCRATCH_RECLAIM: "1"
+      GGML_HIP_SAFE_STATE_IO: "1"
+      GGML_HIP_RDNA2_AUTO: "0"
+      NCCL_P2P_DISABLE: "1"
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    ports:
+      - "${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${LLAMA_PORT:-8080}:8080/tcp"
+    volumes:
+      - type: bind
+        source: /tank/models
+        target: /models
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - --model
+      - /models/${LLAMA_MODEL:-language-models/lm-studio_gguf/lmstudio-community/Qwen3.5-35B-A3B-GGUF/Qwen3.5-35B-A3B-Q4_K_M.gguf}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --n-gpu-layers
+      - all
+      - --split-mode
+      - layer
+      - --tensor-split
+      - ${LLAMA_TENSOR_SPLIT:-1,1}
+      - --ctx-size
+      - ${LLAMA_CONTEXT_SIZE:-8192}
+      - --parallel
+      - "1"
+      - --flash-attn
+      - "on"
+      - --jinja
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15m
