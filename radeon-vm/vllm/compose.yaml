@@ -41,7 +41,8 @@ services:
       - --max-model-len
       - ${CONTEXT_SIZE:-8192}
       - --max-num-seqs
-      - "1"
+      - "5"
+      - --enable-prefix-caching
       - --gpu-memory-utilization
       - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
       - --kv-cache-dtype

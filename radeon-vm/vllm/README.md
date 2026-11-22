@@ -58,11 +58,15 @@ curl http://192.168.30.105:8000/v1/chat/completions \
   -N -d '{"model":"qwen3.8-27b-gptq","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
-The current settings in `.env` use two GPUs, 262144 tokens, one concurrent
-sequence and a 0.9 per-GPU memory utilization target. This target is not a
-hard VRAM limit or a GPU reservation; competing inference processes can still
-cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
-are conservative settings, not performance tuning; AMD SMI reported P2P
+The current settings use two GPUs, a 262144-token limit, up to five concurrent
+sequences, prefix caching and a 0.9 per-GPU memory utilization target. The
+sequences share the available KV cache, so five simultaneous maximum-length
+requests are not guaranteed to fit. Prefix caching reuses matching prompt
+prefixes; unrelated prompt content cannot share cached state. The utilization
+target is not a hard VRAM limit or a GPU reservation; competing inference
+processes can still cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and
+disabled custom all-reduce are conservative settings, not performance tuning;
+AMD SMI reported P2P
 disabled between the two cards. Loading a model can use swap on this VM;
 loading the GPTQ model from NFS previously took several minutes. The older
 Qwen3-32B-AWQ checkpoint was
