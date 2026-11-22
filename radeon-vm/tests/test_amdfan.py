@@ -242,6 +242,47 @@ class FanTests(unittest.TestCase):
 			amdfan.BmcClient.set_duty(client, duty=10)
 		self.assertEqual(client.request.call_count, 1)
 
+	def test_only_transient_reads_are_retryable(self):
+		client = amdfan.BmcClient(username='dummy', password='dummy', opener=mock.Mock())
+		path = '/api/fanctrl/PWM'
+		client.opener.open.side_effect = amdfan.urllib.error.URLError(TimeoutError())
+		with self.assertRaisesRegex(amdfan.BmcTransientReadError, 'TimeoutError'):
+			client.request(path=path)
+		with self.assertRaises(amdfan.BmcError) as caught:
+			client.request(path=path, method='PUT', body={})
+		self.assertNotIsInstance(caught.exception, amdfan.BmcTransientReadError)
+		for status, subclass in ((503, amdfan.BmcTransientReadError), (401, amdfan.BmcError)):
+			client.opener.open.side_effect = amdfan.urllib.error.HTTPError(amdfan.BMC_URL + path, status, 'dummy', {}, None)
+			with self.assertRaisesRegex(amdfan.BmcError, f'HTTP {status}') as caught:
+				client.request(path=path)
+			self.assertIs(type(caught.exception), subclass)
+
+	def test_transient_read_gets_one_retry_without_writing(self):
+		client = mock.Mock()
+		transient = amdfan.BmcTransientReadError('HTTP 503')
+		for outcomes in ([transient, None], [transient, transient], [transient, amdfan.BmcError('mode mismatch')]):
+			with self.subTest(outcomes=outcomes), mock.patch.object(amdfan.time, 'sleep') as sleep:
+				client.reset_mock()
+				client.verify_duty.side_effect = outcomes
+				if outcomes[1] is None:
+					amdfan.verify_running_setting(client=client, duty=10, full_speed=False)
+				else:
+					with self.assertRaises(amdfan.BmcError):
+						amdfan.verify_running_setting(client=client, duty=10, full_speed=False)
+				self.assertEqual(client.method_calls, [mock.call.verify_duty(duty=10)] * 2)
+				sleep.assert_called_once_with(amdfan.READ_RETRY_DELAY_SECONDS)
+
+	def test_monitor_still_fails_high_after_repeated_transient_reads(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 3}
+		client.verify_duty.side_effect = amdfan.BmcTransientReadError('HTTP 503')
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep'):
+			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(result, 1)
+		self.assertEqual(client.verify_duty.call_count, 2)
+		client.set_duty.assert_called_once_with(duty=10)
+		client.full_speed.assert_called_once()
+
 	def test_monitor_requests_full_speed_when_sensor_missing(self):
 		class FakeBMC:
 			def __init__(self):

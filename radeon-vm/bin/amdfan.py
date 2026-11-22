@@ -2,6 +2,8 @@
 """Control the GPU fan hub using Radeon temperatures and the ASUS BMC."""
 
 import argparse
+import errno
+import http.client
 import http.cookiejar
 import json
 import logging
@@ -45,6 +47,7 @@ MAX_UPDATE_DELAY_SECONDS = 20
 MIN_DUTY_CHANGE = 3
 HOST_POLL_SECONDS = 10
 HOST_FAILURE_LIMIT = 3
+READ_RETRY_DELAY_SECONDS = 0.5
 LOG = logging.getLogger('amdfan')
 
 
@@ -54,6 +57,10 @@ class SensorError(Exception):
 
 class BmcError(Exception):
 	"""The BMC request or its verification failed."""
+
+
+class BmcTransientReadError(BmcError):
+	"""A BMC read failed in a way that may clear on retry."""
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -86,9 +93,18 @@ class BmcClient:
 		try:
 			with self.opener.open(request, timeout=5) as response:
 				return json.load(response)
-		except (OSError, ValueError, urllib.error.URLError) as exc:
-			# never log request bodies, response bodies, tokens or passwords
-			raise BmcError(f'BMC {method} {path} failed') from exc
+		# log only the HTTP status or error type, never bodies or credentials
+		except urllib.error.HTTPError as exc:
+			error = BmcTransientReadError if method == 'GET' and exc.code in (408, 500, 502, 503, 504) else BmcError
+			exc.close()
+			raise error(f'BMC {method} {path} failed: HTTP {exc.code}') from exc
+		except (OSError, ValueError, http.client.HTTPException) as exc:
+			cause = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+			transient = (isinstance(cause, (TimeoutError, ConnectionError, http.client.IncompleteRead)) or
+				(isinstance(cause, socket.gaierror) and cause.errno == socket.EAI_AGAIN) or
+				(isinstance(cause, OSError) and cause.errno in (errno.EHOSTUNREACH, errno.ENETUNREACH)))
+			error = BmcTransientReadError if method == 'GET' and transient else BmcError
+			raise error(f'BMC {method} {path} failed: {type(cause).__name__}') from exc
 
 	def login(self) -> None:
 		self.csrf = None
@@ -125,6 +141,21 @@ class BmcClient:
 		mode = self.request(path='/api/fanctrl/mode')
 		if not isinstance(mode, dict) or mode.get('FanMode') != FULL_SPEED_MODE:
 			raise BmcError('BMC full-speed mode readback mismatch')
+
+
+def verify_running_setting(*, client: BmcClient, duty: int, full_speed: bool) -> None:
+	def verify() -> None:
+		if full_speed:
+			client.verify_full_speed()
+		else:
+			client.verify_duty(duty=duty)
+
+	try:
+		verify()
+	except BmcTransientReadError as exc:
+		LOG.warning('%s; retrying readback once', exc)
+		time.sleep(READ_RETRY_DELAY_SECONDS)
+		verify()
 
 
 def bmc_from_credential() -> BmcClient:
@@ -325,10 +356,8 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 			raise BmcError('BMC fan mode is unavailable or unsupported')
 		while not stopping:
 			profile = read_profile(path=path)
-			if last_profile == FULL_SPEED_PROFILE:
-				client.verify_full_speed()
-			elif last_duty is not None:
-				client.verify_duty(duty=last_duty)
+			if last_duty is not None:
+				verify_running_setting(client=client, duty=last_duty, full_speed=last_profile == FULL_SPEED_PROFILE)
 			if stopping:
 				break
 			first = last_profile is None
