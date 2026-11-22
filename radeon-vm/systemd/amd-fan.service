@@ -1,0 +1,18 @@
+[Unit]
+Description=Control Radeon GPU hub fans through the ASUS BMC
+After=network-online.target systemd-modules-load.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=dante
+Environment=HOME=/home/dante
+RuntimeDirectory=amd-fan
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 /docker/radeon-vm/bin/amd-fan.py monitor
+ExecStopPost=/bin/sh -c 'if [ "$$SERVICE_RESULT" != success ]; then exec /usr/bin/python3 /docker/radeon-vm/bin/amd-fan.py emergency; fi'
+Restart=no
+WatchdogSec=45
+
+[Install]
+WantedBy=multi-user.target

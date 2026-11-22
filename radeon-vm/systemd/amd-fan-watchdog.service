@@ -1,0 +1,16 @@
+[Unit]
+Description=Protect Radeon GPU cooling if VM 105 stops responding
+After=network-online.target pvedaemon.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+LoadCredential=bmc.json:/root/.creds/kveikur-bmc
+ExecStart=/usr/bin/python3 /usr/local/lib/amd-fan/amd-fan.py host-watchdog
+# systemd may discard the credential directory before the stop hook runs.
+ExecStopPost=/bin/sh -c 'if [ "$$SERVICE_RESULT" != success ]; then exec /usr/bin/env -u CREDENTIALS_DIRECTORY /usr/bin/python3 /usr/local/lib/amd-fan/amd-fan.py emergency; fi'
+Restart=no
+WatchdogSec=60
+
+[Install]
+WantedBy=multi-user.target
