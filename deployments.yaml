@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-11-21"
-  timestamp: "11:54:58 PM"
+  date: "2026-11-22"
+  timestamp: "5:28:59 AM"
 
 cluster:
   entrypoint:
@@ -139,6 +139,20 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [ai, docker]
+  150:
+    hostname: vllm
+    node: kveikur
+    address: 192.168.30.150
+    pool: ""
+    type: lxc
+    tags: [gpu]
+  151:
+    hostname: llama-cpp
+    node: kveikur
+    address: 192.168.30.151
+    pool: ""
+    type: lxc
+    tags: [gpu]
   200:
     hostname: adguardhome
     node: cerulean
