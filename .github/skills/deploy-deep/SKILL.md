@@ -230,17 +230,34 @@ cd /docker
 source /docker/_common/functions.sh
 declare -F dpull >/dev/null
 # dcd -v in every stack dpull will bring up, using the pre-pull definitions
-for app_dir in /docker/*/ /docker/radeon-vm/*/; do
+vm_active=()
+for app_dir in /docker/*/; do
 	[ -f "${app_dir}compose.yaml" ] || [ -f "${app_dir}compose.yml" ] || continue
+	compose_cmd=(docker compose)
+	if [[ ${HOSTNAME%%.*} == radeon-vm && ( ${app_dir%/} == /docker/vllm || ${app_dir%/} == /docker/llama-cpp ) ]]; then
+		project=${app_dir%/}
+		project=${project##*/}
+		running=$(docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}}')
+		[ -n "$running" ] || continue
+		[ -f "${app_dir}.env.vm.local" ] && [ -f "${app_dir}compose.vm.yaml" ] || { echo "Missing VM Compose settings in $app_dir" >&2; exit 1; }
+		compose_cmd=(docker compose --env-file .env.vm.local -f compose.vm.yaml)
+		vm_active+=("$project")
+	fi
 	echo "== down: ${app_dir}"
-	(cd "$app_dir" && docker compose down -v)
+	(cd "$app_dir" && "${compose_cmd[@]}" down -v)
 done
-dpull
+if [[ ${HOSTNAME%%.*} == radeon-vm ]]; then
+	DPULL_VM_STACKS="${vm_active[*]}" dpull
+else
+	dpull
+fi
 ```
 
 - The down loop mirrors `dpull`'s stack discovery and runs before its pull,
-  so containers stop with the definitions that created them. After a
-  bootstrap pull, use the pre-pull teardown plan instead.
+  so containers stop with the definitions that created them. On `radeon-vm`,
+  it records active split stacks, uses their VM-specific Compose files, and
+  passes that list to `dpull` so intentionally stopped stacks stay stopped.
+  After a bootstrap pull, use the pre-pull teardown plan instead.
 - `dpull` runs `git pull`, then per stack `pull --ignore-buildable`,
   `build --pull --no-cache` and `up --build -d --remove-orphans`, stopping at
   the first failure. Neither step is stack-scoped.

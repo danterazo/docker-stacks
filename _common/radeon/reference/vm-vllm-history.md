@@ -1,5 +1,9 @@
 # Radeon vLLM
 
+> Historical VM notes. Run Compose from `/docker/vllm` with
+> `--env-file .env.vm.local -f compose.vm.yaml`; the split LXC uses a
+> different configuration. Do not start either stack without approval.
+
 The Compose service serves a local Hugging Face safetensors checkpoint over
 the OpenAI-compatible API on `192.168.30.105:8000`. The endpoint has no API
 key configured; restrict network access to trusted clients. Both the local and
@@ -7,7 +11,7 @@ NAS model libraries are mounted read-write as requested; restrict access to
 this container accordingly. `data/` contains writable caches. The Ollama
 Compose service was removed; its model volume and local identity data remain.
 
-The configured model and its path are in `.env`. The default is
+The configured model and its path are in `.env.vm.local`. The default is
 Qwen3.8-27B GPTQ, text only, configured for 262,144 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
@@ -48,10 +52,10 @@ and 66/81/58 °C on the two GPUs. Stop or adjust long load if cooling is
 inadequate; those junction readings approached the benchmark's 90 °C cutoff.
 
 ```bash
-cd /docker/radeon-vm/vllm
-docker compose config --quiet
-docker compose up -d
-docker compose logs -f vllm
+cd /docker/vllm
+docker compose --env-file .env.vm.local -f compose.vm.yaml config --quiet
+docker compose --env-file .env.vm.local -f compose.vm.yaml up -d
+docker compose --env-file .env.vm.local -f compose.vm.yaml logs -f vllm
 curl http://192.168.30.105:8000/v1/models
 curl http://192.168.30.105:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
@@ -72,7 +76,7 @@ loading the GPTQ model from NFS previously took several minutes. The older
 Qwen3-32B-AWQ checkpoint was
 removed after its GPTQ alternative was downloaded. Change
 `VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and any necessary
-runtime settings in `.env`, then recreate with `docker compose up -d`.
+runtime settings in `.env.vm.local`, then recreate with `docker compose --env-file .env.vm.local -f compose.vm.yaml up -d`.
 
 ## Local and NAS models
 
@@ -100,7 +104,7 @@ one, the script resolves the current `main` revision. Mount the local disk and
 run:
 
 ```bash
-cd /docker/radeon-vm/vllm
+cd /docker/vllm
 python3 download-models.py
 ```
 
@@ -110,7 +114,7 @@ metadata and sizes; this is not a full content checksum. It refuses to overwrite
 an incomplete or mismatched checkpoint, resumes its own partial downloads, and
 promotes them only after verification. It needs internet access; the current
 Qwen checkpoint requires roughly 20 GiB of free space. Select the local root
-and checkpoint in `.env`, then recreate the service. Set `VLLM_MODEL_DISK` if
+and checkpoint in `.env.vm.local`, then recreate the service. Set `VLLM_MODEL_DISK` if
 the dedicated disk is mounted somewhere other than `/models`.
 
 For four cards, first validate passthrough, cooling, PSU headroom and ROCm
@@ -123,7 +127,7 @@ stock caps; do not assume the previous 180 W power target is active.
 
 Automatic tool choice is enabled with the `qwen3_xml` parser, matching the
 current checkpoint's XML tool-call template. When changing models, set
-`VLLM_TOOL_CALL_PARSER` in `.env` to a parser compatible with the new model's
+`VLLM_TOOL_CALL_PARSER` in `.env.vm.local` to a parser compatible with the new model's
 chat template before recreating the service. These are server settings and
 apply to all clients; OpenCode's `--auto` controls permission approval instead.
 

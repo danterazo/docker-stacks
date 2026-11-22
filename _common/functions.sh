@@ -32,16 +32,34 @@ dpull() {
 	git merge --ff-only FETCH_HEAD || return 1
 
 	# iterate over each app directory and run Docker Compose commands
-	for app_dir in "$root_dir"/*/ "$root_dir"/radeon-vm/*/; do
+	for app_dir in "$root_dir"/*/; do
 		[ -d "$app_dir" ] || continue
 		[ -f "$app_dir/compose.yaml" ] || [ -f "$app_dir/compose.yml" ] || continue
 
 		cd "$app_dir" || return 1
-		active_services=$(docker compose config --services) || return 1
+		local -a compose_cmd=(docker compose)
+		if [[ ${HOSTNAME%%.*} == radeon-vm && ( ${app_dir%/} == "$root_dir/vllm" || ${app_dir%/} == "$root_dir/llama-cpp" ) ]]; then
+			# preserve the VM-specific settings and never start an inactive experiment
+			local project=${app_dir%/}
+			project=${project##*/}
+			if [[ ${DPULL_VM_STACKS+x} ]]; then
+				case " ${DPULL_VM_STACKS} " in
+					*" $project "*) active_services=$project ;;
+					*) continue ;;
+				esac
+			else
+				active_services=$(docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}}') || return 1
+			fi
+			[ -n "$active_services" ] || continue
+			[ -f .env.vm.local ] && [ -f compose.vm.yaml ] || { echo "ERROR: VM Compose settings missing in $app_dir" >&2; return 1; }
+			compose_cmd=(docker compose --env-file .env.vm.local -f compose.vm.yaml)
+		else
+			active_services=$("${compose_cmd[@]}" config --services) || return 1
+		fi
 		[ -n "$active_services" ] || continue
-		docker compose pull --ignore-buildable || return 1
-		docker compose build --pull --no-cache || return 1
-		docker compose up --build -d --remove-orphans || return 1
+		"${compose_cmd[@]}" pull --ignore-buildable || return 1
+		"${compose_cmd[@]}" build --pull --no-cache || return 1
+		"${compose_cmd[@]}" up --build -d --remove-orphans || return 1
 	done
 }
 

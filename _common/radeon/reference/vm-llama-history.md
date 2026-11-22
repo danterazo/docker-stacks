@@ -1,5 +1,9 @@
 # Experimental llama.cpp RDNA2 stack
 
+> Historical VM notes. Run Compose from `/docker/llama-cpp` with
+> `--env-file .env.vm.local -f compose.vm.yaml`; the split LXC uses a
+> different configuration. Do not start either stack without approval.
+
 This is an **alternative**, not a companion, to vLLM: don't build or start it while vLLM is initializing or benchmarking, and don't run both engines on these GPUs at once. Nothing starts automatically. This stack has not yet been built or run on this VM.
 
 It uses [edwinbrowwn/llama.cpp-rdna2](https://github.com/edwinbrowwn/llama.cpp-rdna2) at `e194cbddce45178467cef4afab0e3400ea357406`, on the locally present `blivioniag/vllm-rdna:v0.31.0-extras` ROCm 7.14 image pinned by digest. It builds HIP for `gfx1030` with RCCL required; speculative sidecars and the web UI are not built. GitHub must be reachable for the source fetch. Reproducibility also depends on the pinned base image remaining available; overrides to build arguments change the build.
@@ -9,20 +13,21 @@ The initial model is the existing Qwen3.5-35B-A3B Q4_K_M GGUF on the Tank NFS vo
 ## First trial (only after the vLLM benchmark is finished)
 
 1. Stop vLLM using its own documented procedure and verify it has released GPU memory. Do not stop or change other services without authorization.
-2. From this directory:
+2. From `/docker/llama-cpp`:
 
    ```sh
-   cp .env.example .env
+   cd /docker/llama-cpp
+   test -e .env.vm.local || cp reference/vm.env.example .env.vm.local
    ```
 
-   Check the LAN IP (`ip -br -4 addr`), UID/GID (`id`) and device groups (`ls -ln /dev/kfd /dev/dri`). Update `.env` if needed. The current two-card default is `LLAMA_TENSOR_SPLIT=1,1`; for four V620s, use `1,1,1,1` after independently validating the new hardware/topology. All visible HIP GPUs are available to the server; verify the startup logs show the expected devices and split. Adjust `LLAMA_CONTEXT_SIZE` only after observing memory usage.
+   Check the LAN IP (`ip -br -4 addr`), UID/GID (`id`) and device groups (`ls -ln /dev/kfd /dev/dri`). Update `.env.vm.local` if needed. The current two-card default is `LLAMA_TENSOR_SPLIT=1,1`; for four V620s, use `1,1,1,1` after independently validating the new hardware/topology. All visible HIP GPUs are available to the server; verify the startup logs show the expected devices and split. Adjust `LLAMA_CONTEXT_SIZE` only after observing memory usage.
 3. Validate, build, and start explicitly:
 
    ```sh
-   docker compose config --quiet
-   docker compose build
-   docker compose up -d --no-build
-   docker compose logs -f llama-cpp
+   docker compose --env-file .env.vm.local -f compose.vm.yaml config --quiet
+   docker compose --env-file .env.vm.local -f compose.vm.yaml build
+   docker compose --env-file .env.vm.local -f compose.vm.yaml up -d --no-build
+   docker compose --env-file .env.vm.local -f compose.vm.yaml logs -f llama-cpp
    ```
 
 4. Once ready, check the endpoint and send a small OpenAI-compatible test:
@@ -34,11 +39,11 @@ The initial model is the existing Qwen3.5-35B-A3B Q4_K_M GGUF on the Tank NFS vo
      -d '{"messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":32}'
    ```
 
-   Replace the address and port with the values in `.env`. Health returns 503 while loading and 200 when ready; Docker's 15-minute start period is not a startup deadline. Inspect logs and GPU memory if unhealthy. The LAN endpoint has **no authentication**: restrict access using the network/firewall, and do not expose it to untrusted networks. Only a text GGUF is configured, not a vision projector.
+   Replace the address and port with the values in `.env.vm.local`. Health returns 503 while loading and 200 when ready; Docker's 15-minute start period is not a startup deadline. Inspect logs and GPU memory if unhealthy. The LAN endpoint has **no authentication**: restrict access using the network/firewall, and do not expose it to untrusted networks. Only a text GGUF is configured, not a vision projector.
 5. After testing, stop it and verify GPU memory is released before returning to vLLM:
 
    ```sh
-   docker compose down
+   docker compose --env-file .env.vm.local -f compose.vm.yaml down
    ```
 
 ## Multi-GPU and safety notes

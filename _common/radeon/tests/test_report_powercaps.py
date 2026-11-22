@@ -34,7 +34,7 @@ class ReportTests(unittest.TestCase):
         self.assertIn('0.5000', table)
 
     def test_energy_integrates_both_gpus_and_converts_to_wh(self):
-        with tempfile.TemporaryDirectory(dir='/tmp/opencode') as temp:
+        with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
             samples = [{'pci': pci, 'elapsed_s': timestamp, 'power_w': 20}
                        for pci in ['0000:01:00.0', '0000:02:00.0'] for timestamp in [0.1, 5, 9.5]]
@@ -42,7 +42,7 @@ class ReportTests(unittest.TestCase):
             self.assertAlmostEqual(report.energy_wh(directory, result()), 400/3600)
 
     def test_incomplete_suite_is_not_reported_as_complete(self):
-        with tempfile.TemporaryDirectory(dir='/tmp/opencode') as temp:
+        with tempfile.TemporaryDirectory() as temp:
             prefix = Path(temp) / 'suite'
             directory = Path(str(prefix) + '-short')
             directory.mkdir()

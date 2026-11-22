@@ -30,7 +30,7 @@ nvidia-vm)
 	export PATH="$PATH:/docker/plex-video:/docker/immich"
 	;;
 radeon-vm)
-	export PATH="$PATH:/docker/radeon-vm/bin:/docker/radeon-vm/ollama:/docker/radeon-vm/vllm"
+	export PATH="$PATH:/docker/_common/radeon/bin:/docker/vllm:/docker/llama-cpp"
 	;;
 *)
 	export PATH="$PATH:/docker/${HOSTNAME%%.*}"

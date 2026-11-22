@@ -62,7 +62,7 @@ measured. At the user's request, testing stopped and both caps remain 120 W.
 ## vLLM Update: 2026-11-21
 
 Two V620s are now passed through. The vLLM smoke test has run on both GPUs;
-see [`../vllm/README.md`](../vllm/README.md) for the tested configuration,
+see [`vllm/README.md`](../../../vllm/README.md) for the tested configuration,
 limitations and current power-cap observations. The baseline below is historical.
 
 ## Observed Guest Baseline: 2026-11-21
@@ -173,7 +173,7 @@ existing installer and service be installed/enabled through approved guest
 administration. The installer deliberately does not enable the service:
 
 ```bash
-cd /docker/radeon-vm
+cd /docker/_common/radeon
 sudo bash bin/install-v620-powercap.sh
 sudo /usr/local/sbin/v620-powercap-apply.sh 180
 sudo systemctl enable --now v620-powercap.service

@@ -130,11 +130,12 @@ here, not in the YAML.
     deploy them there. Tautulli is a service inside the Plex Compose stacks,
     not its own sparse-checkout path. LXCs 102 and 108 are production guests
     with automatic startup; query their state when needed.
-  - VM 105 (`radeon-vm`) runs `radeon-vm/ollama` (primary) and
-    `radeon-vm/vllm` (opt-in `evaluation` profile). Keep `radeon-vm` and
-    `_common` in its sparse checkout; never enable the profile implicitly.
-    Routine updates skip stacks with no active Compose services; absent GPU
-    passthrough does not mean the VM is ready.
+  - VM 105 (`radeon-vm`) retains GPU fallback configurations in `vllm`
+    and `llama-cpp` with shared `_common/radeon` helpers; its containers and
+    Ollama assets were removed. Do not start inactive stacks implicitly.
+    LXCs 150 (`vllm`) and 151 (`llama-cpp`) are Docker guests even when only
+    tagged `gpu`; a matching stack and verified Docker installation establish
+    their placement. Neither a checkout nor an absent GPU proves readiness.
   - Caddy runs on LXCs 203 and 205 (Cerulean) and 204 (Kex) at last
     discovery; AdGuard Home on 200, 201 and 202. Disambiguate by ID and
     owner. Flag duplicate sets with no primary, several primaries or untagged

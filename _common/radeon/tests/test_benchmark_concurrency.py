@@ -19,7 +19,7 @@ spec.loader.exec_module(benchmark)
 
 class ConcurrencyTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(dir='/tmp/opencode')
+        self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.cards = []
@@ -60,6 +60,17 @@ class ConcurrencyTests(unittest.TestCase):
                           for _, hwmon in self.cards], [120000000, 120000000])
         self.assertEqual(self.deployed[0][-1], '4')
         self.assertEqual(self.deployed[-1][-1], '1')
+
+    def test_deploy_uses_vm_compose_and_vm_environment(self):
+        override = self.root / 'override.json'
+        with mock.patch.object(benchmark, 'command', return_value='ok') as command, \
+                mock.patch('builtins.print'):
+            benchmark.deploy(override)
+        command.assert_called_once_with([
+            'docker', 'compose', '--env-file', '/docker/vllm/.env.vm.local',
+            '-f', '/docker/vllm/compose.vm.yaml', '-f', str(override),
+            'up', '-d', '--no-deps', '--pull', 'never', 'vllm',
+        ])
 
     def test_restore_after_success(self):
         self.run_main(lambda *a, **k: {'decode_tokens_s': 25, 'ttft_s': 5})

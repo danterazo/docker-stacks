@@ -130,10 +130,10 @@ code never authorizes a deployment.
 - Share stack shell helpers through `_common`, using stack-local autoenv
 	aliases rather than command symlinks. Do not restore the global dotfiles
 	IPInfo alias.
-- Keep `_common/` for helpers shared across stacks or hosts. Put hardware- or
-	host-specific scripts in a host-specific directory included only in that
-	host's sparse-checkout profile. Radeon V620 power helpers belong under
-	`/docker/radeon-vm/` and only in the `radeon-vm` bootstrap profile.
+- Keep `_common/` for helpers shared across stacks or hosts. Radeon fan and
+	power helpers shared by the VM and host live under `_common/radeon/`;
+	include that directory only in the `radeon-vm`, `vllm` and `llama-cpp`
+	sparse-checkout profiles.
 - Prefer one public `.env` and one ignored `.secrets` file per stack, with
 	commented sections instead of separate VPN secret files unless isolation
 	requires it. Use `gluetun/` for Gluetun runtime configuration and mirror

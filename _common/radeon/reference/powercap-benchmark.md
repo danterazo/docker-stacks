@@ -12,7 +12,7 @@ detected V620s' `power1_cap` controls. `amd-cap` normally changes caps through
 sudo; permanent user ownership of sysfs controls is unnecessary.
 
 ```bash
-cd /docker/radeon-vm
+cd /docker/_common/radeon
 python3 bin/benchmark-powercaps.py \
   --wait-ready 900 \
   --caps 250 220 210 200 180 160 140 120 \

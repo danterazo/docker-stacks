@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'vllm/download-models.py'
+SCRIPT = Path(__file__).resolve().parents[3] / 'vllm/download-models.py'
 spec = importlib.util.spec_from_file_location('download_models', SCRIPT)
 manager = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(manager)

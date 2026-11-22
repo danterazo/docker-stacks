@@ -114,6 +114,7 @@ upgrade_ubuntu /etc/os-release /etc/update-manager/release-upgrades || exit 1
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
 	["nvidia-vm"]='immich plex-video audiomuse'
+	["radeon-vm"]='vllm llama-cpp'
 	["paperless-ngx"]='paperless-ngx'
 )
 
@@ -331,7 +332,10 @@ for sparse_path in "${sparse_paths[@]}"; do
 	seen_sparse_paths["${sparse_path}"]=1
 	unique_sparse_paths+=("${sparse_path}")
 done
-unique_sparse_paths+=('!/_common/radeon/')
+case "${HOST_NAME}" in
+	radeon-vm|vllm|llama-cpp) ;;
+	*) unique_sparse_paths+=('!/_common/radeon/') ;;
+esac
 dante_git -C "${HOME_DIR}" sparse-checkout set --no-cone "${unique_sparse_paths[@]}" || exit 1
 
 # move to app dir if the host contains only a single stack

@@ -50,7 +50,6 @@ hivenet/machine-config/machine-id
 
 # ignore data backed up elsewhere
 */data/
-radeon-vm/*/data/
 immich/redis-data/
 
 # ignore ephemeral folders/files

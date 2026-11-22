@@ -18,7 +18,8 @@ MODULE = Path(__file__).with_name('benchmark-powercaps.py')
 spec = importlib.util.spec_from_file_location('powercaps', MODULE)
 powercaps = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(powercaps)
-COMPOSE = Path('/docker/radeon-vm/vllm/compose.yaml')
+COMPOSE = Path('/docker/vllm/compose.vm.yaml')
+ENV_FILE = Path('/docker/vllm/.env.vm.local')
 
 
 def command(args):
@@ -26,7 +27,7 @@ def command(args):
 
 
 def deploy(override):
-    print(command(['docker', 'compose', '-f', str(COMPOSE), '-f', str(override),
+    print(command(['docker', 'compose', '--env-file', str(ENV_FILE), '-f', str(COMPOSE), '-f', str(override),
                    'up', '-d', '--no-deps', '--pull', 'never', 'vllm']), flush=True)
 
 

@@ -18,7 +18,7 @@ spec.loader.exec_module(benchmark)
 
 class PowercapTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(dir='/tmp/opencode')
+        self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.cards = []

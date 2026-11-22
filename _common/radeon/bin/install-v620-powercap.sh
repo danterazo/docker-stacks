@@ -6,8 +6,8 @@ fi
 set -euo pipefail
 
 repo_root=/docker
-script_source="$repo_root/radeon-vm/bin/v620-powercap-apply.sh"
-unit_source="$repo_root/radeon-vm/systemd/v620-powercap.service"
+script_source="$repo_root/_common/radeon/bin/v620-powercap-apply.sh"
+unit_source="$repo_root/_common/radeon/systemd/v620-powercap.service"
 script_target=/usr/local/sbin/v620-powercap-apply.sh
 unit_target=/etc/systemd/system/v620-powercap.service
 
