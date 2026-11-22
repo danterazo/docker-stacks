@@ -26,14 +26,22 @@ class HostPreflightTests(unittest.TestCase):
 			self.assertEqual(preflight.main(), 0)
 		self.assertIn('0000:01:00.0, 0000:02:00.0', output.getvalue())
 
+	def test_waits_for_delayed_host_gpu_sensors(self):
+		gpus = [{'pci': '0000:30:00.0'}, {'pci': '0000:43:00.0'}]
+		with mock.patch.object(preflight.controller, 'read_gpus', side_effect=[preflight.controller.SensorError('not ready'), gpus]), \
+				mock.patch.object(preflight.time, 'sleep') as sleep, contextlib.redirect_stdout(io.StringIO()) as output:
+			self.assertEqual(preflight.main(timeout=10), 0)
+		self.assertIn('0000:30:00.0, 0000:43:00.0', output.getvalue())
+		sleep.assert_called_once()
+
 	def test_reports_sensor_failure(self):
 		with mock.patch.object(preflight.controller, 'read_gpus', side_effect=preflight.controller.SensorError('missing')), contextlib.redirect_stderr(io.StringIO()) as output:
-			self.assertEqual(preflight.main(), 1)
+			self.assertEqual(preflight.main(timeout=0), 1)
 		self.assertIn('missing', output.getvalue())
 
 	def test_rejects_unexpected_count(self):
 		with mock.patch.object(preflight.controller, 'read_gpus', return_value=[{'pci': '0000:01:00.0'}]), contextlib.redirect_stderr(io.StringIO()) as output:
-			self.assertEqual(preflight.main(), 1)
+			self.assertEqual(preflight.main(timeout=0), 1)
 		self.assertIn('Expected 2 V620 GPUs, found 1', output.getvalue())
 
 

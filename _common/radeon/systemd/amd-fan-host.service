@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
+TimeoutStartSec=120
 LoadCredential=bmc.json:/root/.creds/kveikur-bmc
 RuntimeDirectory=amd-fan
 RuntimeDirectoryPreserve=yes
