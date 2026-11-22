@@ -42,8 +42,6 @@ services:
       - --max-num-seqs
       - "5"
       - --enable-prefix-caching
-      - --speculative-config
-      - '{"method":"mtp","num_speculative_tokens":2,"draft_sample_method":"probabilistic"}'
       - --gpu-memory-utilization
       - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
       - --kv-cache-dtype
@@ -53,14 +51,14 @@ services:
       - --language-model-only
       - --skip-mm-profiling
       - --default-chat-template-kwargs
-      - '{"reasoning_effort":"low"}'
+      - '{"enable_thinking":true}'
       # The chat template starts thinking in the prompt; split generated reasoning.
       - --reasoning-parser
-      - qwen3
-      # The current Qwen checkpoint emits Qwen3-Coder-style XML tool calls.
+      - gemma4
+      # Match Gemma's native tool-call format rather than Qwen XML.
       - --enable-auto-tool-choice
       - --tool-call-parser
-      - ${VLLM_TOOL_CALL_PARSER:-qwen3_xml}
+      - ${VLLM_TOOL_CALL_PARSER:-gemma4}
     healthcheck:
       test:
         - CMD
