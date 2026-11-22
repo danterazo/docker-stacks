@@ -174,6 +174,11 @@ Both cards and the enabled boot-service override are set to **200 W**. The
 shared cap helper detects all matching cards rather than assuming a fixed card
 count. The per-card cap was not revalidated on four GPUs.
 
+> Historical VM-specific cleanup and sudo behavior follows; it is not an
+> instruction to change host sysfs ownership. On kveikur, cap changes require
+> root and the current zero-based selector behavior is documented in
+> `gpu-readiness.md`.
+
 The temporary direct-write access is no longer needed. Restore ownership:
 
 ```bash

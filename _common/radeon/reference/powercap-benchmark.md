@@ -8,8 +8,9 @@ drivers, fan profiles, or the boot service.
 
 Reserve an exclusive inference window and finish any fan-control changes first.
 The benchmark requires healthy `amd-fan` monitoring and write access to the
-detected V620s' `power1_cap` controls. `amd-cap` normally changes caps through
-sudo; permanent user ownership of sysfs controls is unnecessary.
+detected V620s' `power1_cap` controls. On kveikur, `amd-cap` reports caps
+without writes; setting caps requires root. Permanent user ownership of sysfs
+controls is unnecessary.
 
 ```bash
 cd /docker/_common/radeon

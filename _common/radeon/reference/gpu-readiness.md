@@ -19,9 +19,9 @@ is already running, it preserves any user-selected cap. A successful live test
 is not proof of cold-boot behavior; validate an approved reboot separately.
 
 
-## Power-Tuning Runtime Refresh: 2026-11-22
+## Historical VM Power-Tuning Refresh: 2026-11-22
 
-The current guest exposes a verified 120–250 W range on both installed V620s,
+At that time, the guest exposed a verified 120–250 W range on both V620s,
 and writes/readback at multiple caps have succeeded during inference testing.
 The enabled boot service starts at 120 W. This supersedes the earlier stock
 driver's 250–250 W observations below; it does not establish the current boot
@@ -33,7 +33,7 @@ The completed measurements and unresolved BMC cooling-control fault are in
 single-request sweep completed; dynamic and concurrency performance was not
 measured. At the user's request, testing stopped and both caps remain 120 W.
 
-## Boot Safety and Host Staging: 2026-11-22
+## Historical VM Boot Safety and Host Staging: 2026-11-22
 
 - After an earlier assistant incorrectly instructed installation of an
   unsigned override under Secure Boot, both that override and the separately
@@ -49,31 +49,29 @@ measured. At the user's request, testing stopped and both caps remain 120 W.
   The loaded stock driver still reports 250–250 W on both cards. The enabled
   powercap service has an override targeting 120 W and its last run failed
   against the stock 250 W minimum; no 120 W cap has been verified.
-- In VM 105, `amd-cap` is a Bash function in the shared shell aliases and in
-  `/home/dante/.bash_aliases`: without arguments it displays caps; with a
-  wattage it invokes `/scripts/hardware/amd-cap.sh` via sudo. The old
-  `radeon-cap.sh` path is
-  retained as a compatibility wrapper for the installed powercap service.
-  The shared script currently matches V620 PCI/subsystem IDs only. Its source
-  changes have not been published or verified on kveikur.
-- `amd-cap 120` attempts every detected V620 and reports success or failure
-  per card. A failure does not stop other cards, so a failed run may have
-  changed some cards. To select cards, append their full current PCI addresses
-  or use `1`–`4` as shorthand for `0000:01:00.0`–`0000:04:00.0`, for example
-  `amd-cap 120 1 2` or `amd-cap 250 0000:01:00.0`. Numbers are PCI bus
-  addresses, not detected-card positions; unmatched targets are rejected.
-  250 W is the observed factory cap, not an unlimited setting. Check addresses
-  after hardware or VM changes.
-  Individual changes are temporary: the enabled guest boot service currently
-  attempts 120 W on every detected V620 at startup, overriding per-card choices.
+- On kveikur, `amd-cap` enumerates matching V620s in sorted PCI-address order.
+  GPU IDs `0`–`3` select positions in that detected list, not PCI bus numbers;
+  this boot maps GPU 0 to `0000:30:00.0` and GPU 1 to `0000:43:00.0`.
+  Full PCI addresses and inclusive ranges such as `0:1` are also accepted.
+  Missing IDs are rejected before any cap is changed. `amd-cap` or
+  `amd-cap status` displays all cards; a wattage without selectors targets all.
+  The legacy `radeon-cap.sh` path delegates to the same implementation.
+- The earlier VM-only helper used `1`–`4` as PCI bus-number shorthand; that
+  historical convention is superseded on the host. A failed multi-card write
+  may leave some selected cards changed, so check every selected readback.
+  250 W is the observed factory cap, not an unlimited setting. Host cold boot
+  applies the 200 W baseline after cooling is verified; later per-card changes
+  remain in effect until changed or the driver is reinitialized. The earlier VM
+  boot service attempted 120 W on all guest GPUs; its current fallback behavior
+  has not been reverified after the migration.
 - On kveikur, `/var/lib/v620-builds/7.3.5-1-pve` contains the exact packaged
   Proxmox headers, upstream Linux 7.3.5 source and a staged 120 W patch. The
   candidate `linux-7.3.5/drivers/gpu/drm/amd/amdgpu/amdgpu.ko` compiled with
   `7.3.5-1-pve` vermagic and contains the powerfix log string; its SHA-256 is
   `7023b47984c0ce2da2f22c8001cf8a543e628d50c05dd584661f306158b0e271`.
-  The Proxmox-specific source provenance and runtime behavior are not yet
-  validated; do not install the candidate merely because it compiles. The
-  active host driver remains stock and both V620s remain assigned to VM 105.
+  At staging time, Proxmox-specific source provenance and runtime behavior
+  were not yet validated and the VM still owned both GPUs. See the host-driver
+  section above for the subsequent runtime tests and current persistence state.
 - Host build dependencies `m4`, `flex`, `bison`, `libzstd-dev` and `libelf-dev`
   were installed. Headers were extracted into the staging directory, not
   installed as a package; the existing Zenpower DKMS auto-install was avoided.
