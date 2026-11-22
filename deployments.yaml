@@ -2,7 +2,7 @@ schema_version: 1
 
 last_updated:
   date: "2026-11-22"
-  timestamp: "5:28:59 AM"
+  timestamp: "9:13:57 AM"
 
 cluster:
   entrypoint:
@@ -45,9 +45,9 @@ docker_guests:
     hostname: radeon-vm
     node: kveikur
     address: 192.168.30.105
-    pool: dev
+    pool: ""
     type: qemu
-    tags: [gpu]
+    tags: [deprecated, docker, gpu]
   107:
     hostname: calibre
     node: kex
@@ -101,7 +101,7 @@ docker_guests:
     hostname: traccar
     node: kex
     address: 192.168.30.119
-    pool: prod
+    pool: dev
     type: lxc
     tags: [docker]
   120:
@@ -122,37 +122,37 @@ docker_guests:
     hostname: dreeve
     node: kex
     address: 192.168.30.122
-    pool: prod
+    pool: dev
     type: lxc
     tags: [docker]
   123:
     hostname: speedtest
     node: kex
     address: 192.168.30.123
-    pool: prod
+    pool: dev
     type: lxc
     tags: [docker]
   130:
     hostname: hermes
     node: cerulean
     address: 192.168.30.130
-    pool: prod
+    pool: dev
     type: lxc
     tags: [ai, docker]
   150:
     hostname: vllm
     node: kveikur
     address: 192.168.30.150
-    pool: ""
+    pool: prod
     type: lxc
-    tags: [gpu]
+    tags: [docker, gpu]
   151:
     hostname: llama-cpp
     node: kveikur
     address: 192.168.30.151
-    pool: ""
+    pool: dev
     type: lxc
-    tags: [gpu]
+    tags: [docker, gpu]
   200:
     hostname: adguardhome
     node: cerulean
