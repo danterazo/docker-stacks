@@ -1,5 +1,24 @@
 # Radeon VM GPU Readiness
 
+## Host Driver and LXC Boot Readiness: 2026-11-22
+
+Kveikur's stock `7.3.5-1-pve` AMD driver reported a fixed 250 W limit on both
+V620s. The patched host-specific module reported 120–250 W; both cards accepted
+and read back 120 W and then 200 W. The tested module is stored under
+`/usr/local/lib/radeon-v620/7.3.5-1-pve/` and selected through the kernel's
+`updates/` directory; the packaged stock module remains available for rollback.
+The candidate is unsigned and taints the kernel. Its ABI checks passed, but its
+source is upstream 7.3.5 rather than a verified exact Proxmox source tree.
+
+The `v620-lxc-start` boot service checks both PCI identities, host fan/BMC
+health, GPU temperatures and lower-cap support, applies the 200 W cold-boot
+baseline, refreshes the approved device paths for CT 150 and CT 151, then starts
+them without blocking unrelated guests. It keeps both CTs' Proxmox `onboot`
+settings disabled to avoid starting them before the safety gate. If either CT
+is already running, it preserves any user-selected cap. A successful live test
+is not proof of cold-boot behavior; validate an approved reboot separately.
+
+
 ## Power-Tuning Runtime Refresh: 2026-11-22
 
 The current guest exposes a verified 120–250 W range on both installed V620s,

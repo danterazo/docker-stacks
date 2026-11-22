@@ -1,0 +1,15 @@
+[Unit]
+Description=Start Radeon LXCs after host cooling and GPU power are ready
+Requires=amd-fan-host.service
+After=amd-fan-host.service pve-guests.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/usr/sbin/pct
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/v620-lxc-start.py
+TimeoutStartSec=420
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
