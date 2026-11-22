@@ -1,0 +1,13 @@
+[Unit]
+Description=Simulate Radeon GPU fan profiles (no hardware control)
+After=systemd-modules-load.service
+
+[Service]
+Type=simple
+User=dante
+Environment=HOME=/home/dante
+ExecStart=/usr/bin/python3 /docker/radeon-vm/bin/amdfan.py monitor
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
