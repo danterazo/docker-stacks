@@ -45,6 +45,12 @@
   were installed. Headers were extracted into the staging directory, not
   installed as a package; the existing Zenpower DKMS auto-install was avoided.
 
+## vLLM Update: 2026-11-21
+
+Two V620s are now passed through. The vLLM smoke test has run on both GPUs;
+see [`../vllm/README.md`](../vllm/README.md) for the tested configuration,
+limitations and current power-cap observations. The baseline below is historical.
+
 ## Observed Guest Baseline: 2026-11-21
 
 - `radeon-vm` is a KVM guest running Ubuntu 26.10, kernel

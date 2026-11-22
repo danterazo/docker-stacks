@@ -2,7 +2,6 @@ services:
   vllm:
     image: blivioniag/vllm-rdna:v0.31.0-extras
     container_name: radeon-vllm
-    profiles: [evaluation]
     user: 1000:1000
     group_add:
       - ${VIDEO_GID:-44}
@@ -19,12 +18,18 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - ./data/:/state/:rw
-      - models_nfs:/model/:ro,nocopy
+      # Use the already-mounted NAS; do not silently create an empty path.
+      - type: bind
+        source: /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}
+        target: /model
+        read_only: true
+        bind:
+          create_host_path: false
     command:
       - serve
       - /model
       - --served-model-name
-      - radeon-vllm
+      - ${VLLM_SERVED_MODEL_NAME:-radeon-vllm}
       - --host
       - 0.0.0.0
       - --port
@@ -37,6 +42,14 @@ services:
       - ${CONTEXT_SIZE:-8192}
       - --max-num-seqs
       - "1"
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
+      - --kv-cache-dtype
+      - float16
+      # Conservative PCIe fallback until GPU P2P is tested.
+      - --disable-custom-all-reduce
+      - --language-model-only
+      - --skip-mm-profiling
     healthcheck:
       test:
         - CMD
@@ -53,11 +66,3 @@ services:
 networks:
   vllm-net:
     name: vllm-net
-
-volumes:
-  models_nfs:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=192.168.20.42,nfsvers=4.2,nconnect=8,ro,hard,noatime
-      device: :/tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a NAS Hugging Face checkpoint}
