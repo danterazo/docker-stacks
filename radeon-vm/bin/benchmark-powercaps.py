@@ -62,7 +62,7 @@ def wait_ready(base, timeout):
         now = time.monotonic()
         try:
             server = metrics(base)
-            fan = json.loads(Path('/run/amdfan/status.json').read_text())
+            fan = json.loads(Path('/run/amd-fan/status.json').read_text())
             ready = (not server['num_requests_running'] and not server['num_requests_waiting']
                      and fan.get('service_ready') and fan.get('control_enabled')
                      and now - fan['updated_monotonic'] < 20)
@@ -112,7 +112,7 @@ def request(base, model, cards, cap, repeats, output_tokens, cutoff, destination
         while not stop.is_set():
             try:
                 now = time.monotonic()
-                fan = json.loads(Path('/run/amdfan/status.json').read_text())
+                fan = json.loads(Path('/run/amd-fan/status.json').read_text())
                 if not fan.get('service_ready') or not fan.get('control_enabled'):
                     raise RuntimeError('Fan control not ready')
                 if now - fan['updated_monotonic'] > 35:

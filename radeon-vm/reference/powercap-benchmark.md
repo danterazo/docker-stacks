@@ -7,7 +7,7 @@ drivers, fan profiles, or the boot service.
 ## Running
 
 Reserve an exclusive inference window and finish any fan-control changes first.
-The benchmark requires healthy `amdfan` monitoring and write access to the
+The benchmark requires healthy `amd-fan` monitoring and write access to the
 detected V620s' `power1_cap` controls. `amd-cap` normally changes caps through
 sudo; permanent user ownership of sysfs controls is unnecessary.
 

@@ -5,8 +5,8 @@
 **200 W per card is the provisional balanced choice; 220 W is the more
 conservative performance choice.** Do not treat either as fully validated for
 sustained or concurrent workloads. At the user's request, testing stopped after
-a BMC cooling-control failure. Both installed cards were restored to **120 W**;
-no final higher cap, boot-service change, or fan-profile change was applied.
+a BMC cooling-control failure and both cards were restored to 120 W. Later, the
+user selected **200 W**, which is now applied and configured at boot.
 
 The completed dataset is the `v620-validated-short` sweep: two passes over every
 cap from 250 to 120 W. The longer-prompt sweep completed only its first 250 W
@@ -121,7 +121,7 @@ tokens/s figures are available. Do not estimate or present them as measurements.
 
 ## Fan recommendations and unresolved fault
 
-After these tests, `bin/amdfan.py` was updated at the user's request to recover
+After these tests, `bin/amd-fan.py` was updated at the user's request to recover
 from temporary BMC failures rather than exit. Login, read, and write transport
 errors and HTTP 408/500/502/503/504 select `quiet`, keep sampling GPU temperatures,
 mark control unverified, and retry/reconnect. On recovery the quiet duty is
@@ -133,10 +133,9 @@ invalid configuration/readback, and explicit shutdown retain fail-high behavior.
 The patch does not make unreachable hardware controllable: the BMC may retain
 its last applied setting during an outage. It also does not remove the emergency
 fallback for actual sensor faults. Unit tests cover startup/read/write blips,
-recovery, prolonged outages, and sensor loss. Activation requires
-`sudo systemctl restart amdfan`; this session could not restart the unit because
-sudo requires interactive authentication. No new inference tests were run after
-the patch.
+recovery, prolonged outages, and sensor loss. The renamed `amd-fan.service` and
+host `amd-fan-watchdog.service` were subsequently started and verified; no new
+inference tests were run after the patch.
 
 - The user prefers `quiet`; **keep `quiet` for any follow-up comparisons** so
   they represent daily use. It was adequate for the short completed tests, but
@@ -148,9 +147,9 @@ the patch.
 - Keeping the user-validated 5% idle floor does not require keeping a gentle
   under-load ramp; the current balanced/performance profiles ramp earlier while
   retaining the same idle floor.
-- Fix the BMC communication reliability first. amdfan received repeated
+- Fix the BMC communication reliability first. The fan controller received repeated
   HTTP 502 errors, stopped, and could not initially confirm emergency full-speed
-  cooling. A separate `amdfan.py emergency` attempt also failed at BMC login with
+  cooling. A separate emergency attempt also failed at BMC login with
   HTTP 502. **Do not resume sustained inference until fan control or fixed
   physical airflow is independently verified.**
 - Full speed was attempted only as an emergency fallback after fan control
@@ -171,11 +170,9 @@ the patch.
 - Use one shared cap for two and four cards initially; the measurements do not
   justify card-count-based switching rules. Revalidate after adding the cards.
 
-Both cards and the enabled boot service currently remain at **120 W**. No new
-cap has been persisted. Once cooling is healthy, `amd-cap 200` applies the
-provisional candidate through sudo; a boot-service override must be separately
-updated if that cap is to persist. The shared cap helper detects all matching
-cards rather than assuming a fixed card count.
+Both cards and the enabled boot-service override are set to **200 W**. The
+shared cap helper detects all matching cards rather than assuming a fixed card
+count. The per-card cap was not revalidated on four GPUs.
 
 The temporary direct-write access is no longer needed. Restore ownership:
 
