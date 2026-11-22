@@ -52,3 +52,32 @@ limit. A repeat streamed 32-token prompt generated 53 output tokens with
 tokens/s. This confirms serving and short-context decoding—not a full
 262K request or a head-to-head result against llama.cpp. The 3.26 tokens/s
 AWQ baseline used a different model as well as different quantization.
+
+## Qwen3.8-27B Speculative Decoding Trial (2026-11-22)
+
+The deployed TP2 GPTQ server uses the checkpoint's built-in MTP head with two
+speculative tokens and probabilistic drafting. Two short 160-output-token
+completion prompts ran while another request was active. The no-speculation
+baseline measured 8.43 and 16.41 output tokens/s. MTP measured 9.23 and
+36.72 tokens/s on the first pass, then 35.47 and 35.42 tokens/s on a repeat.
+The first MTP request included a 7.31-second time to first token; subsequent
+requests started in about 0.2–0.3 seconds. Other activity was not controlled,
+so these are shared-workload observations, not a rigorous speedup calculation.
+MTP batches multiple tokens into streamed chunks, making decode rates
+approximate. One required structured tool call succeeded before and after the
+final MTP restoration; this does not prove broad correctness or long-context
+stability. The 262144-token configured limit and five-sequence setting remain.
+The latest MTP startup reported a 400155-token shared KV pool, versus 465862
+tokens in the earlier no-speculation startup; capacities vary with profiling.
+
+The separate `nvidia/Qwen3.5-0.8B-Qwen3.8-27B-Draft` checkpoint was downloaded
+to the local model disk at revision `6afca85a17ef55a7b89ec0be38cf62983f68d23b`.
+Its model and tokenizer SHA-256 values match Hugging Face metadata, and the
+tokenizer hash matches the target's. On the deployed `v0.31.0-extras` image,
+explicit `draft_model` initially misclassified the Qwen draft as an MTP head
+and failed with a 5120-versus-1024 weight dimension mismatch. A temporary,
+read-only code override avoided that misclassification and loaded the draft
+weights, but initialization stalled for ten minutes with repeated shared-memory
+broadcast warnings. The underlying stall is unconfirmed; no draft throughput
+was measured. The temporary override was removed from the container, and the
+working built-in MTP service was restored. Do not treat the override as a fix.
