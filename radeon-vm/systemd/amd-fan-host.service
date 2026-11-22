@@ -1,0 +1,18 @@
+[Unit]
+Description=Control Radeon GPU hub fans using host GPU telemetry
+After=network-online.target systemd-modules-load.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+LoadCredential=bmc.json:/root/.creds/kveikur-bmc
+RuntimeDirectory=amd-fan
+RuntimeDirectoryPreserve=yes
+ExecStartPre=/usr/bin/python3 /usr/local/lib/amd-fan-host/preflight.py
+ExecStart=/usr/bin/python3 /usr/local/lib/amd-fan-host/amd-fan.py monitor
+ExecStopPost=/usr/bin/env -u CREDENTIALS_DIRECTORY /usr/bin/python3 /usr/local/lib/amd-fan-host/amd-fan.py emergency
+Restart=no
+WatchdogSec=45
+
+[Install]
+WantedBy=multi-user.target
