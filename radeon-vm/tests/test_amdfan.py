@@ -51,7 +51,7 @@ class FanTests(unittest.TestCase):
 		result = amdfan.evaluate(profile='quiet', gpus=gpus)
 		self.assertEqual(len(gpus), 2)
 		self.assertEqual(result['hottest_c'], 55)
-		self.assertEqual(result['proposed_duty_percent'], 10)
+		self.assertEqual(result['proposed_duty_percent'], 5)
 		self.assertFalse(result['control_enabled'])
 
 	def test_missing_gpu_or_sensor_is_fail_high_proposal(self):
@@ -71,12 +71,12 @@ class FanTests(unittest.TestCase):
 		empty.mkdir()
 		result = amdfan.sample(path=self.state, root=empty, pci_root=self.pci)
 		self.assertEqual(result['profile'], 'quiet')
-		self.assertEqual(result['proposed_duty_percent'], 10)
+		self.assertEqual(result['proposed_duty_percent'], 5)
 		self.assertEqual(result['sensor_state'], 'no-driver-bound-gpus')
 		amdfan.select_profile(path=self.state, name='performance')
 		result = amdfan.sample(path=self.state, root=empty, pci_root=self.pci)
 		self.assertEqual(result['effective_profile'], 'quiet')
-		self.assertEqual(result['proposed_duty_percent'], 10)
+		self.assertEqual(result['proposed_duty_percent'], 5)
 
 	def test_zero_readings_with_a_bound_driver_is_not_quiet_fallback(self):
 		empty = self.root / 'empty-hwmon'
@@ -93,7 +93,7 @@ class FanTests(unittest.TestCase):
 		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep'), mock.patch.object(amdfan, 'read_temperatures', side_effect=[gpus, []]):
 			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
 		self.assertEqual(result, 1)
-		client.set_duty.assert_called_once_with(duty=10)
+		client.set_duty.assert_called_once_with(duty=5)
 		client.full_speed.assert_called_once()
 
 	def test_implausible_and_duplicate_labels_fail(self):
@@ -115,7 +115,7 @@ class FanTests(unittest.TestCase):
 		self.assertIn('error', result)
 
 	def test_cli_quiet_sets_only_the_test_profile(self):
-		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 10, 'updated_monotonic': float('inf')}
+		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 5, 'updated_monotonic': float('inf')}
 		out = io.StringIO()
 		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'PROFILE_PATH', self.state), mock.patch.object(amdfan, 'read_status', return_value=state), contextlib.redirect_stdout(out):
 			self.assertEqual(amdfan.main(), 0)
@@ -140,16 +140,26 @@ class FanTests(unittest.TestCase):
 			with self.subTest(profile=profile):
 				duties = [amdfan.duty_for(profile=profile, temperature_c=temp) for temp in range(101)]
 				self.assertEqual(duties, sorted(duties))
-				self.assertGreaterEqual(min(duties), 5 if profile == 'quiet-5' else 10)
+				self.assertEqual(min(duties), 5)
 				self.assertEqual(duties[85], 100)
 
-	def test_quiet_5_reduces_only_the_lower_ramp_and_is_not_the_default(self):
+	def test_four_profiles_share_an_idle_floor_and_ramp_in_order(self):
+		self.assertEqual(amdfan.PROFILE_NAMES, ('quiet', 'balanced', 'performance', 'full-speed'))
 		self.assertEqual(amdfan.read_profile(path=self.state), 'quiet')
-		trial = amdfan.PROFILES['quiet-5']
-		self.assertEqual(trial[:2], [(0, 5), (55, 5)])
-		self.assertEqual(trial[-2:], amdfan.PROFILES['quiet'][-2:])
-		for temp in range(80):
-			self.assertLessEqual(amdfan.duty_for(profile='quiet-5', temperature_c=temp), amdfan.duty_for(profile='quiet', temperature_c=temp))
+		for temp in range(101):
+			duties = [amdfan.duty_for(profile=profile, temperature_c=temp) for profile in amdfan.PROFILE_NAMES]
+			self.assertEqual(duties, sorted(duties))
+			self.assertEqual(duties[-1], 100)
+			if temp <= 50:
+				self.assertEqual(duties[:3], [5, 5, 5])
+		self.assertEqual(amdfan.PROFILES['quiet'], [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)])
+
+	def test_small_decrease_returns_to_idle_floor_after_cooldown(self):
+		for profile in amdfan.PROFILES:
+			with self.subTest(profile=profile):
+				self.assertFalse(amdfan.should_update_duty(profile=profile, duty=5, last_duty=6, elapsed=0))
+				self.assertTrue(amdfan.should_update_duty(profile=profile, duty=5, last_duty=6, elapsed=amdfan.MAX_UPDATE_DELAY_SECONDS))
+				self.assertFalse(amdfan.should_update_duty(profile=profile, duty=5, last_duty=5, elapsed=amdfan.MAX_UPDATE_DELAY_SECONDS))
 
 	def test_fake_bmc_curve_format_and_global_side_effect(self):
 		class FakeBMC:
@@ -288,7 +298,7 @@ class FanTests(unittest.TestCase):
 			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
 		self.assertEqual(result, 1)
 		self.assertEqual(client.verify_duty.call_count, 2)
-		client.set_duty.assert_called_once_with(duty=10)
+		client.set_duty.assert_called_once_with(duty=5)
 		client.full_speed.assert_called_once()
 
 	def test_read_timeout_holds_applied_profile_then_resumes(self):
@@ -310,19 +320,19 @@ class FanTests(unittest.TestCase):
 				self.assertTrue(state['readback_degraded'])
 				self.assertEqual(state['profile'], 'quiet')
 				self.assertEqual(state['pending_profile'], 'performance')
-				self.assertEqual(state['last_verified_duty_percent'], 10)
-				client.set_duty.assert_called_once_with(duty=10)
+				self.assertEqual(state['last_verified_duty_percent'], 5)
+				client.set_duty.assert_called_once_with(duty=5)
 				client.full_speed.assert_not_called()
 			else:
 				self.assertNotIn('readback_degraded', state)
 				self.assertEqual(state['profile'], 'performance')
-				self.assertEqual(state['verified_requested_duty_percent'], 20)
+				self.assertEqual(state['verified_requested_duty_percent'], 12)
 				raise KeyboardInterrupt
 
 		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect):
 			with self.assertRaises(KeyboardInterrupt):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
-		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=10), mock.call(duty=20)])
+		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5), mock.call(duty=12)])
 
 	def test_read_timeout_does_not_hold_when_hot_or_past_the_grace_period(self):
 		for hot in (False, True):
@@ -344,7 +354,7 @@ class FanTests(unittest.TestCase):
 					result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
 				self.assertEqual(result, 1)
 				self.assertEqual(now >= amdfan.READ_TIMEOUT_HOLD_SECONDS, not hot)
-				client.set_duty.assert_called_once_with(duty=10)
+				client.set_duty.assert_called_once_with(duty=5)
 				client.full_speed.assert_called_once()
 
 	def test_monitor_requests_full_speed_when_sensor_missing(self):
@@ -428,7 +438,7 @@ class FanTests(unittest.TestCase):
 		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=KeyboardInterrupt):
 			with self.assertRaises(KeyboardInterrupt):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
-		client.set_duty.assert_called_once_with(duty=10)
+		client.set_duty.assert_called_once_with(duty=5)
 		client.full_speed.assert_called_once()
 
 	def test_full_speed_profile_uses_bmc_mode_and_requires_no_gpu_sensors(self):
@@ -467,9 +477,9 @@ class FanTests(unittest.TestCase):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
 		self.assertEqual(client.method_calls, [
 			mock.call.login(), mock.call.request(path='/api/fanctrl/mode'),
-			mock.call.set_duty(duty=10), mock.call.verify_duty(duty=10),
+			mock.call.set_duty(duty=5), mock.call.verify_duty(duty=5),
 			mock.call.full_speed(), mock.call.verify_full_speed(),
-			mock.call.set_duty(duty=10), mock.call.full_speed(),
+			mock.call.set_duty(duty=5), mock.call.full_speed(),
 		])
 
 	def test_full_speed_override_is_verified(self):

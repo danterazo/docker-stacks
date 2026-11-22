@@ -23,10 +23,9 @@ from typing import Any, Dict, List, Optional, Tuple
 # provisional points use the hottest edge, junction or memory sensor in Celsius
 # verify every blower starts at the minimum duty and validate under sustained load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
-	'quiet': [(0, 10), (55, 10), (65, 18), (72, 28), (76, 40), (80, 60), (85, 100)],
-	'quiet-5': [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)],
-	'balanced': [(0, 15), (55, 15), (65, 24), (72, 38), (76, 55), (80, 75), (85, 100)],
-	'performance': [(0, 20), (55, 20), (65, 32), (72, 50), (76, 70), (80, 90), (85, 100)],
+	'quiet': [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)],
+	'balanced': [(0, 5), (53, 5), (55, 8), (65, 24), (72, 38), (76, 55), (80, 75), (85, 100)],
+	'performance': [(0, 5), (50, 5), (55, 12), (65, 32), (72, 50), (76, 70), (80, 90), (85, 100)],
 }
 FULL_SPEED_PROFILE = 'full-speed'
 PROFILE_NAMES = (*PROFILES, FULL_SPEED_PROFILE)
@@ -424,7 +423,7 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 				previous = result['control_c']
 				duty = result['proposed_duty_percent']
 				now = time.monotonic()
-				if last_duty is None or profile != last_profile or duty == 100 > last_duty or duty >= last_duty + MIN_DUTY_CHANGE or (duty <= last_duty - MIN_DUTY_CHANGE and now - last_write >= MAX_UPDATE_DELAY_SECONDS):
+				if last_duty is None or profile != last_profile or should_update_duty(profile=profile, duty=duty, last_duty=last_duty, elapsed=now - last_write):
 					client.set_duty(duty=duty)
 					last_duty, last_write = duty, now
 			last_profile = profile
@@ -460,6 +459,14 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 				LOG.warning('BMC full-speed mode confirmed after reconnecting')
 			except BmcError:
 				LOG.critical('could not set BMC full-speed mode; verify cooling immediately')
+
+
+def should_update_duty(*, profile: str, duty: int, last_duty: int, elapsed: float) -> bool:
+	if duty == 100 > last_duty or duty >= last_duty + MIN_DUTY_CHANGE:
+		return True
+	# settle at the idle floor even if the final decrease is below the deadband
+	floor = PROFILES[profile][0][1]
+	return elapsed >= MAX_UPDATE_DELAY_SECONDS and (duty == floor < last_duty or duty <= last_duty - MIN_DUTY_CHANGE)
 
 
 def guest_agent_responds() -> bool:
