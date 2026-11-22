@@ -82,6 +82,14 @@ excluded from Proxmox VM backups but inherits the host's ZFS snapshot policy;
 treat its contents as a cache, not a PBS backup. Changing the selected model
 requires recreating the service.
 
+VM 105's 200 GiB `rpool-vm:vm-105-models` disk is mounted by filesystem UUID
+at `/models`; the generated mount unit is ordered before Docker. The local
+Qwen3.8, Gemma 4, Granite 4.2, and Phi 4 Reasoning Plus safetensors copies
+were checksum-verified before their NAS originals were removed. GGUF and
+Ollama versions remain on the NAS. Qwen has been smoke-tested locally; the
+other checkpoints have not been tested for runtime compatibility or GPU fit.
+Existing NAS snapshots can retain deleted files until their normal expiration.
+
 Edit the `MODELS` list near the top of `download-models.py` to select public
 Hugging Face model IDs or URLs. Append `@<commit>` to pin a revision; without
 one, the script resolves the current `main` revision. Mount the local disk and
