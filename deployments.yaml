@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-11-19"
-  timestamp: "4:40:14 AM"
+  date: "2026-11-21"
+  timestamp: "11:54:58 PM"
 
 cluster:
   entrypoint:
@@ -43,7 +43,7 @@ docker_guests:
     tags: [docker]
   105:
     hostname: radeon-vm
-    node: kex
+    node: kveikur
     address: 192.168.30.105
     pool: dev
     type: qemu
@@ -155,7 +155,7 @@ docker_guests:
     tags: [docker, networking, secondary]
   202:
     hostname: adguardhome
-    node: cerulean
+    node: kveikur
     address: 192.168.30.202
     pool: prod
     type: lxc
@@ -176,7 +176,7 @@ docker_guests:
     tags: [docker, networking, secondary]
   205:
     hostname: caddy
-    node: cerulean
+    node: kveikur
     address: 192.168.30.205
     pool: prod
     type: lxc
