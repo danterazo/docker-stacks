@@ -260,7 +260,7 @@ class FanTests(unittest.TestCase):
 			amdfan.BmcClient.set_duty(client, duty=10)
 		self.assertEqual(client.request.call_count, 1)
 
-	def test_only_transient_reads_are_retryable(self):
+	def test_transient_reads_and_uncertain_writes_are_classified(self):
 		client = amdfan.BmcClient(username='dummy', password='dummy', opener=mock.Mock())
 		path = '/api/fanctrl/PWM'
 		client.opener.open.side_effect = amdfan.urllib.error.URLError(TimeoutError())
@@ -269,11 +269,17 @@ class FanTests(unittest.TestCase):
 		with self.assertRaises(amdfan.BmcError) as caught:
 			client.request(path=path, method='PUT', body={})
 		self.assertNotIsInstance(caught.exception, amdfan.BmcTransientReadError)
+		self.assertIsInstance(caught.exception, amdfan.BmcTransientError)
 		for status, subclass in ((504, amdfan.BmcReadTimeout), (503, amdfan.BmcTransientReadError), (401, amdfan.BmcError)):
 			client.opener.open.side_effect = amdfan.urllib.error.HTTPError(amdfan.BMC_URL + path, status, 'dummy', {}, None)
 			with self.assertRaisesRegex(amdfan.BmcError, f'HTTP {status}') as caught:
 				client.request(path=path)
 			self.assertIs(type(caught.exception), subclass)
+		for method in ('GET', 'POST', 'PUT'):
+			for status in (408, 500, 502, 503, 504):
+				client.opener.open.side_effect = amdfan.urllib.error.HTTPError(amdfan.BMC_URL + path, status, 'dummy', {}, None)
+				with self.subTest(method=method, status=status), self.assertRaises(amdfan.BmcTransientError):
+					client.request(path=path, method=method, body={})
 
 	def test_transient_read_gets_one_retry_without_writing(self):
 		client = mock.Mock()
@@ -290,15 +296,32 @@ class FanTests(unittest.TestCase):
 				self.assertEqual(client.method_calls, [mock.call.verify_duty(duty=10)] * 2)
 				sleep.assert_called_once_with(amdfan.READ_RETRY_DELAY_SECONDS)
 
-	def test_monitor_still_fails_high_after_repeated_transient_reads(self):
+	def test_monitor_recovers_after_repeated_transient_reads(self):
 		client = mock.Mock()
 		client.request.return_value = {'FanMode': 3}
-		client.verify_duty.side_effect = amdfan.BmcTransientReadError('HTTP 503')
-		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep'):
-			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
-		self.assertEqual(result, 1)
-		self.assertEqual(client.verify_duty.call_count, 2)
-		client.set_duty.assert_called_once_with(duty=5)
+		transient = amdfan.BmcTransientReadError('HTTP 503')
+		client.verify_duty.side_effect = [transient, transient, None]
+		status = self.root / 'status.json'
+		steps = iter(('normal', 'outage', 'recovered'))
+		def inspect(seconds):
+			if seconds == amdfan.READ_RETRY_DELAY_SECONDS:
+				return
+			state = json.loads(status.read_text())
+			step = next(steps)
+			if step == 'outage':
+				self.assertTrue(state['service_ready'])
+				self.assertFalse(state['control_enabled'])
+				self.assertEqual(state['recovery_profile'], 'quiet')
+				client.full_speed.assert_not_called()
+			elif step == 'recovered':
+				self.assertTrue(state['control_enabled'])
+				self.assertEqual(state['profile'], 'quiet')
+				raise KeyboardInterrupt
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
+		self.assertEqual(client.login.call_count, 2)
+		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5)] * 2)
 		client.full_speed.assert_called_once()
 
 	def test_read_timeout_holds_applied_profile_then_resumes(self):
@@ -318,23 +341,24 @@ class FanTests(unittest.TestCase):
 				amdfan.select_profile(path=self.state, name='performance')
 			elif step == 'hold':
 				self.assertTrue(state['readback_degraded'])
+				self.assertFalse(state['control_enabled'])
 				self.assertEqual(state['profile'], 'quiet')
-				self.assertEqual(state['pending_profile'], 'performance')
+				self.assertEqual(amdfan.read_profile(path=self.state), 'quiet')
 				self.assertEqual(state['last_verified_duty_percent'], 5)
 				client.set_duty.assert_called_once_with(duty=5)
 				client.full_speed.assert_not_called()
 			else:
 				self.assertNotIn('readback_degraded', state)
-				self.assertEqual(state['profile'], 'performance')
-				self.assertEqual(state['verified_requested_duty_percent'], 12)
+				self.assertEqual(state['profile'], 'quiet')
+				self.assertEqual(state['verified_requested_duty_percent'], 5)
 				raise KeyboardInterrupt
 
 		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect):
 			with self.assertRaises(KeyboardInterrupt):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
-		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5), mock.call(duty=12)])
+		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5)] * 2)
 
-	def test_read_timeout_does_not_hold_when_hot_or_past_the_grace_period(self):
+	def test_long_or_hot_outage_keeps_monitoring_but_reports_unverified_cooling(self):
 		for hot in (False, True):
 			with self.subTest(hot=hot):
 				client = mock.Mock()
@@ -348,14 +372,82 @@ class FanTests(unittest.TestCase):
 					nonlocal now
 					now += seconds
 					if hot:
-						gpu_temp.write_text(str(amdfan.READ_TIMEOUT_MAX_TEMP_C * 1000))
+						gpu_temp.write_text(str(amdfan.BMC_OUTAGE_WARNING_TEMP_C * 1000))
+					if now >= 45:
+						state = json.loads((self.root / 'status.json').read_text())
+						self.assertFalse(state['control_enabled'])
+						self.assertTrue(state['service_ready'])
+						self.assertEqual(state['recovery_profile'], 'quiet')
+						client.full_speed.assert_not_called()
+						raise KeyboardInterrupt
 
-				with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=advance), mock.patch.object(amdfan.time, 'monotonic', side_effect=lambda: now):
-					result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
-				self.assertEqual(result, 1)
-				self.assertEqual(now >= amdfan.READ_TIMEOUT_HOLD_SECONDS, not hot)
+				with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=advance), mock.patch.object(amdfan.time, 'monotonic', side_effect=lambda: now), mock.patch.object(amdfan.LOG, 'critical') as critical:
+					with self.assertRaises(KeyboardInterrupt):
+						amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+				critical.assert_called()
 				client.set_duty.assert_called_once_with(duty=5)
 				client.full_speed.assert_called_once()
+
+	def test_startup_login_blip_reports_alive_and_recovers_to_quiet(self):
+		amdfan.select_profile(path=self.state, name='performance')
+		client = mock.Mock()
+		client.login.side_effect = [amdfan.BmcTransientError('HTTP 502'), None]
+		client.request.return_value = {'FanMode': 4}
+		status = self.root / 'status.json'
+		steps = iter(('outage', 'recovered'))
+		def inspect(seconds):
+			state = json.loads(status.read_text())
+			if next(steps) == 'outage':
+				self.assertTrue(state['service_ready'])
+				self.assertFalse(state['control_enabled'])
+				self.assertEqual(state['profile'], 'quiet')
+				client.set_duty.assert_not_called()
+				client.full_speed.assert_not_called()
+			else:
+				self.assertTrue(state['control_enabled'])
+				self.assertEqual(state['profile'], 'quiet')
+				raise KeyboardInterrupt
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect), mock.patch.object(amdfan, 'notify') as notify:
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
+		self.assertIn(mock.call(message='READY=1'), notify.call_args_list)
+		self.assertEqual(client.login.call_count, 2)
+		client.set_duty.assert_called_once_with(duty=5)
+
+	def test_uncertain_write_is_reapplied_not_compared_to_stale_curve(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 4}
+		client.set_duty.side_effect = [None, amdfan.BmcTransientError('HTTP 502'), None]
+		status = self.root / 'status.json'
+		steps = iter(('normal', 'uncertain', 'recovered'))
+		def inspect(seconds):
+			state = json.loads(status.read_text())
+			step = next(steps)
+			if step == 'normal':
+				amdfan.select_profile(path=self.state, name='performance')
+			elif step == 'uncertain':
+				self.assertFalse(state['control_enabled'])
+				self.assertTrue(state['setting_uncertain'])
+				self.assertEqual(state['profile'], 'quiet')
+				client.full_speed.assert_not_called()
+			else:
+				self.assertTrue(state['control_enabled'])
+				self.assertEqual(state['verified_requested_duty_percent'], 5)
+				raise KeyboardInterrupt
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
+		client.verify_duty.assert_called_once_with(duty=5)
+		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5), mock.call(duty=12), mock.call(duty=5)])
+
+	def test_sensor_loss_during_bmc_outage_still_fails_high(self):
+		client = mock.Mock()
+		client.login.side_effect = amdfan.BmcTransientError('HTTP 502')
+		(self.hwmon / 'hwmon1' / 'temp2_input').unlink()
+		with mock.patch.object(amdfan.signal, 'signal'):
+			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(result, 1)
+		client.full_speed.assert_called_once()
 
 	def test_monitor_requests_full_speed_when_sensor_missing(self):
 		class FakeBMC:

@@ -48,8 +48,8 @@ MIN_DUTY_CHANGE = 3
 HOST_POLL_SECONDS = 10
 HOST_FAILURE_LIMIT = 3
 READ_RETRY_DELAY_SECONDS = 0.5
-READ_TIMEOUT_HOLD_SECONDS = 30
-READ_TIMEOUT_MAX_TEMP_C = 75
+BMC_OUTAGE_WARNING_SECONDS = 30
+BMC_OUTAGE_WARNING_TEMP_C = 75
 LOG = logging.getLogger('amdfan')
 
 
@@ -61,7 +61,11 @@ class BmcError(Exception):
 	"""The BMC request or its verification failed."""
 
 
-class BmcTransientReadError(BmcError):
+class BmcTransientError(BmcError):
+	"""A temporary BMC transport/server failure; a write may have reached the BMC."""
+
+
+class BmcTransientReadError(BmcTransientError):
 	"""A BMC read failed in a way that may clear on retry."""
 
 
@@ -102,10 +106,10 @@ class BmcClient:
 		# log only the HTTP status or error type, never bodies or credentials
 		except urllib.error.HTTPError as exc:
 			error = BmcError
-			if method == 'GET' and exc.code in (408, 504):
-				error = BmcReadTimeout
-			elif method == 'GET' and exc.code in (500, 502, 503):
-				error = BmcTransientReadError
+			if exc.code in (408, 500, 502, 503, 504):
+				error = BmcTransientError
+				if method == 'GET':
+					error = BmcReadTimeout if exc.code in (408, 504) else BmcTransientReadError
 			exc.close()
 			raise error(f'BMC {method} {path} failed: HTTP {exc.code}') from exc
 		except (OSError, ValueError, http.client.HTTPException) as exc:
@@ -113,7 +117,9 @@ class BmcClient:
 			transient = (isinstance(cause, (TimeoutError, ConnectionError, http.client.IncompleteRead)) or
 				(isinstance(cause, socket.gaierror) and cause.errno == socket.EAI_AGAIN) or
 				(isinstance(cause, OSError) and cause.errno in (errno.EHOSTUNREACH, errno.ENETUNREACH)))
-			error = BmcTransientReadError if method == 'GET' and transient else BmcError
+			error = BmcTransientError if transient else BmcError
+			if method == 'GET' and transient:
+				error = BmcTransientReadError
 			if method == 'GET' and isinstance(cause, TimeoutError):
 				error = BmcReadTimeout
 			raise error(f'BMC {method} {path} failed: {type(cause).__name__}') from exc
@@ -363,6 +369,11 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 	last_write = 0.0
 	last_verified = 0.0
 	readback_degraded = False
+	need_login = True
+	ready_sent = False
+	outage_since: Optional[float] = None
+	failures = 0
+	write_uncertain = False
 
 	def sample_adaptive(*, profile: str) -> dict:
 		nonlocal telemetry_seen
@@ -373,66 +384,76 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 		return evaluate(profile=profile, gpus=gpus, previous_temperature_c=previous)
 
 	try:
-		client.login()
-		mode = client.request(path='/api/fanctrl/mode')
-		if not isinstance(mode, dict) or mode.get('FanMode') not in (0, FULL_SPEED_MODE, CUSTOM_MODE):
-			raise BmcError('BMC fan mode is unavailable or unsupported')
 		while not stopping:
-			profile = read_profile(path=path)
-			if last_duty is not None and last_profile is not None:
-				if readback_degraded and time.monotonic() - last_verified >= READ_TIMEOUT_HOLD_SECONDS:
-					raise BmcError('BMC readback timeout hold expired')
-				try:
+			notify(message='WATCHDOG=1')
+			try:
+				profile = read_profile(path=path)
+				if need_login:
+					client.login()
+					mode = client.request(path='/api/fanctrl/mode')
+					if not isinstance(mode, dict) or mode.get('FanMode') not in (0, FULL_SPEED_MODE, CUSTOM_MODE):
+						raise BmcError('BMC fan mode is unavailable or unsupported')
+					need_login = False
+				if last_duty is not None and last_profile is not None:
 					verify_running_setting(client=client, duty=last_duty, full_speed=last_profile == FULL_SPEED_PROFILE)
-				except BmcReadTimeout as exc:
-					if stopping:
-						break
-					if last_profile == FULL_SPEED_PROFILE:
-						result = {'profile': last_profile, 'proposed_duty_percent': 100}
-					else:
-						result = sample_adaptive(profile=last_profile)
-						if result['hottest_c'] is not None and result['hottest_c'] >= READ_TIMEOUT_MAX_TEMP_C:
-							raise BmcError(f'BMC readback timed out with GPU at or above {READ_TIMEOUT_MAX_TEMP_C}°C') from exc
-					remaining = READ_TIMEOUT_HOLD_SECONDS - (time.monotonic() - last_verified)
-					if remaining <= 0:
-						raise BmcError('BMC readback timeout hold expired') from exc
-					if not readback_degraded:
-						LOG.warning('BMC readback timed out; holding last confirmed %s setting at %s%%', last_profile, last_duty)
-					readback_degraded = True
-					result.update(service_ready=True, control_enabled=True, readback_degraded=True,
-						last_verified_duty_percent=last_duty, pending_profile=profile if profile != last_profile else None)
-					write_status(path=status_path, result=result)
-					notify(message='WATCHDOG=1')
-					time.sleep(min(INTERVAL_SECONDS, remaining))
-					continue
-				if readback_degraded:
-					LOG.info('BMC readback recovered under %s', last_profile)
-				readback_degraded = False
-			if stopping:
-				break
-			first = last_profile is None
-			if profile == FULL_SPEED_PROFILE:
-				if last_profile != profile:
-					client.full_speed()
-				previous, last_duty = None, 100
-				result = {'profile': profile, 'proposed_duty_percent': 100}
-			else:
-				result = sample_adaptive(profile=profile)
 				if stopping:
 					break
+				if profile == FULL_SPEED_PROFILE:
+					if last_profile != profile or readback_degraded:
+						write_uncertain = True
+						client.full_speed()
+						write_uncertain = False
+					previous, last_duty = None, 100
+					result = {'profile': profile, 'proposed_duty_percent': 100}
+				else:
+					result = sample_adaptive(profile=profile)
+					if stopping:
+						break
+					previous = result['control_c']
+					duty = result['proposed_duty_percent']
+					now = time.monotonic()
+					if last_duty is None or profile != last_profile or readback_degraded or should_update_duty(profile=profile, duty=duty, last_duty=last_duty, elapsed=now - last_write):
+						write_uncertain = True
+						client.set_duty(duty=duty)
+						write_uncertain = False
+						last_duty, last_write = duty, now
+				last_profile = profile
+				last_verified = time.monotonic()
+				if readback_degraded:
+					LOG.info('BMC recovered; %s applied and verified at %s%%', profile, last_duty)
+				readback_degraded, outage_since, failures = False, None, 0
+				result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty,
+					bmc_reachable=True, bmc_mode='full-speed' if profile == FULL_SPEED_PROFILE else 'customized')
+				write_status(path=status_path, result=result)
+			except BmcTransientError as exc:
+				if stopping:
+					break
+				# Never claim a fallback was applied while the BMC is unreachable.
+				# Keep checking GPU sensors, reconnect, and explicitly apply quiet on recovery.
+				if read_profile(path=path) != DEFAULT_PROFILE:
+					select_profile(path=path, name=DEFAULT_PROFILE)
+				result = sample_adaptive(profile=DEFAULT_PROFILE)
 				previous = result['control_c']
-				duty = result['proposed_duty_percent']
 				now = time.monotonic()
-				if last_duty is None or profile != last_profile or should_update_duty(profile=profile, duty=duty, last_duty=last_duty, elapsed=now - last_write):
-					client.set_duty(duty=duty)
-					last_duty, last_write = duty, now
-			last_profile = profile
-			last_verified = time.monotonic()
-			result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty,
-				bmc_mode='full-speed' if profile == FULL_SPEED_PROFILE else 'customized')
-			write_status(path=status_path, result=result)
-			if first:
+				outage_since = now if outage_since is None else outage_since
+				failures += 1
+				if not readback_degraded or failures % 6 == 0:
+					LOG.warning('%s; quiet recovery selected, BMC control unverified; retrying', exc)
+				if now - outage_since >= BMC_OUTAGE_WARNING_SECONDS or (result['hottest_c'] is not None and result['hottest_c'] >= BMC_OUTAGE_WARNING_TEMP_C):
+					LOG.critical('Cooling is unverified during BMC outage; verify airflow and avoid sustained GPU load')
+				result.update(service_ready=True, control_enabled=False, readback_degraded=True,
+					bmc_reachable=False, recovery_profile=DEFAULT_PROFILE, error=str(exc),
+					last_verified_duty_percent=last_duty, last_verified_monotonic=last_verified or None,
+					setting_uncertain=write_uncertain, bmc_outage_seconds=now - outage_since)
+				if write_uncertain:
+					# A PUT may have succeeded even if its reply/readback was lost.
+					# Do not compare the next readback against a stale expected curve.
+					last_duty, last_profile, write_uncertain = None, None, False
+				readback_degraded, need_login = True, True
+				write_status(path=status_path, result=result)
+			if not ready_sent:
 				notify(message='READY=1')
+				ready_sent = True
 			notify(message='WATCHDOG=1')
 			if not stopping:
 				time.sleep(INTERVAL_SECONDS)
