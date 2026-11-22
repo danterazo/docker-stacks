@@ -5,6 +5,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -47,7 +48,7 @@ class FanTests(unittest.TestCase):
 		result = amdfan.evaluate(profile='quiet', gpus=gpus)
 		self.assertEqual(len(gpus), 2)
 		self.assertEqual(result['hottest_c'], 55)
-		self.assertEqual(result['proposed_duty_percent'], 22)
+		self.assertEqual(result['proposed_duty_percent'], 10)
 		self.assertFalse(result['control_enabled'])
 
 	def test_missing_gpu_or_sensor_is_fail_high_proposal(self):
@@ -72,24 +73,24 @@ class FanTests(unittest.TestCase):
 			amdfan.read_gpus(root=self.hwmon)
 
 	def test_profile_selection_and_invalid_state(self):
-		self.assertEqual(amdfan.read_profile(path=self.state), 'balanced')
-		amdfan.select_profile(path=self.state, name='quiet')
 		self.assertEqual(amdfan.read_profile(path=self.state), 'quiet')
+		amdfan.select_profile(path=self.state, name='full-speed')
+		self.assertEqual(amdfan.read_profile(path=self.state), 'full-speed')
 		self.state.write_text('broken')
 		result = amdfan.sample(path=self.state, root=self.hwmon)
 		self.assertEqual(result['proposed_duty_percent'], 100)
 		self.assertIn('error', result)
 
 	def test_cli_quiet_sets_only_the_test_profile(self):
-		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 20, 'updated_monotonic': float('inf')}
+		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 10, 'updated_monotonic': float('inf')}
 		out = io.StringIO()
-		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'profile_path', return_value=self.state), mock.patch.object(amdfan, 'read_status', return_value=state), contextlib.redirect_stdout(out):
+		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'PROFILE_PATH', self.state), mock.patch.object(amdfan, 'read_status', return_value=state), contextlib.redirect_stdout(out):
 			self.assertEqual(amdfan.main(), 0)
 		self.assertIn('quiet active', out.getvalue())
 		self.assertEqual(self.state.read_text(), 'quiet\n')
 
 	def test_cli_refuses_profile_change_when_service_unavailable(self):
-		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'profile_path', return_value=self.state), mock.patch.object(amdfan, 'read_status', return_value=None), contextlib.redirect_stderr(io.StringIO()):
+		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'PROFILE_PATH', self.state), mock.patch.object(amdfan, 'read_status', return_value=None), contextlib.redirect_stderr(io.StringIO()):
 			self.assertEqual(amdfan.main(), 1)
 		self.assertFalse(self.state.exists())
 
@@ -97,7 +98,7 @@ class FanTests(unittest.TestCase):
 		gpus = amdfan.read_gpus(root=self.hwmon)
 		result = amdfan.evaluate(profile='quiet', gpus=gpus, previous_temperature_c=70)
 		self.assertEqual(result['control_c'], 67)
-		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 75)
+		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 60)
 		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=85), 100)
 		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=110), 100)
 
@@ -106,7 +107,7 @@ class FanTests(unittest.TestCase):
 			with self.subTest(profile=profile):
 				duties = [amdfan.duty_for(profile=profile, temperature_c=temp) for temp in range(101)]
 				self.assertEqual(duties, sorted(duties))
-				self.assertGreaterEqual(min(duties), 20)
+				self.assertGreaterEqual(min(duties), 10)
 				self.assertEqual(duties[85], 100)
 
 	def test_fake_bmc_curve_format_and_global_side_effect(self):
@@ -174,6 +175,32 @@ class FanTests(unittest.TestCase):
 		self.assertEqual(transport.headers[1]['X-csrftoken'], 'test-token')
 		client.full_speed()
 		self.assertEqual(transport.mode, 3)
+
+	def test_vm_credential_uses_user_home_without_systemd_loading_it(self):
+		creds = self.root / '.creds'
+		creds.mkdir()
+		(creds / 'kveikur-bmc').write_text(json.dumps({'username': 'dummy-user', 'password': 'dummy-password'}))
+		with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(amdfan.Path, 'home', return_value=self.root):
+			client = amdfan.bmc_from_credential()
+		self.assertEqual(client.username, 'dummy-user')
+		self.assertEqual(client.password, 'dummy-password')
+
+	def test_host_systemd_credential_takes_precedence(self):
+		creds = self.root / 'credentials'
+		creds.mkdir()
+		(creds / 'bmc.json').write_text(json.dumps({'username': 'dummy-host', 'password': 'dummy-password'}))
+		with mock.patch.dict(os.environ, {'CREDENTIALS_DIRECTORY': str(creds)}, clear=True):
+			client = amdfan.bmc_from_credential()
+		self.assertEqual(client.username, 'dummy-host')
+
+	def test_vm_credential_symlink_is_rejected(self):
+		creds = self.root / '.creds'
+		creds.mkdir()
+		(creds / 'target').write_text('{}')
+		(creds / 'kveikur-bmc').symlink_to(creds / 'target')
+		with mock.patch.dict(os.environ, {}, clear=True), mock.patch.object(amdfan.Path, 'home', return_value=self.root):
+			with self.assertRaises(amdfan.BmcError):
+				amdfan.bmc_from_credential()
 
 	def test_bmc_refuses_write_for_unexpected_zone(self):
 		client = mock.Mock()
@@ -257,35 +284,59 @@ class FanTests(unittest.TestCase):
 		self.assertEqual(len(client.duties), 1)
 		self.assertEqual(client.full, 1)
 
-	def test_full_speed_at_start_waits_for_new_profile_request(self):
-		class FakeBMC:
-			def __init__(self):
-				self.duties = []
-				self.full = 0
-
-			def login(self):
-				pass
-
-			def request(self, **_kwargs):
-				return {'FanMode': 3}
-
-			def set_duty(self, *, duty):
-				self.duties.append(duty)
-
-			def full_speed(self):
-				self.full += 1
-
-		client = FakeBMC()
-		revisions = [(1, 1, 1), (1, 1, 1), (1, 2, 2)]
-		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan, 'profile_revision', side_effect=revisions), mock.patch.object(amdfan.time, 'sleep', side_effect=[None, KeyboardInterrupt]):
+	def test_boot_defaults_to_quiet_even_when_bmc_starts_at_full_speed(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 3}
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=KeyboardInterrupt):
 			with self.assertRaises(KeyboardInterrupt):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
-		self.assertEqual(len(client.duties), 1)
-		self.assertEqual(client.full, 1)
+		client.set_duty.assert_called_once_with(duty=10)
+		client.full_speed.assert_called_once()
+
+	def test_full_speed_profile_uses_bmc_mode_and_requires_no_gpu_sensors(self):
+		amdfan.select_profile(path=self.state, name='full-speed')
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 4}
+		status = self.root / 'status.json'
+
+		def inspect_status(_seconds):
+			result = json.loads(status.read_text())
+			self.assertEqual(result['profile'], 'full-speed')
+			self.assertEqual(result['bmc_mode'], 'full-speed')
+			self.assertEqual(result['verified_requested_duty_percent'], 100)
+			raise KeyboardInterrupt
+
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=inspect_status):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.root / 'missing', status_path=status, client=client)
+		client.set_duty.assert_not_called()
+		self.assertEqual(client.full_speed.call_count, 2)
+
+	def test_switches_between_adaptive_and_full_speed_profiles(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 3}
+		profiles = iter(('full-speed', 'quiet'))
+
+		def change_profile(_seconds):
+			try:
+				name = next(profiles)
+			except StopIteration:
+				raise KeyboardInterrupt from None
+			amdfan.select_profile(path=self.state, name=name)
+
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep', side_effect=change_profile):
+			with self.assertRaises(KeyboardInterrupt):
+				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(client.method_calls, [
+			mock.call.login(), mock.call.request(path='/api/fanctrl/mode'),
+			mock.call.set_duty(duty=10), mock.call.verify_duty(duty=10),
+			mock.call.full_speed(), mock.call.verify_full_speed(),
+			mock.call.set_duty(duty=10), mock.call.full_speed(),
+		])
 
 	def test_full_speed_override_is_verified(self):
-		client = mock.Mock()
-		client.request.side_effect = [{}, {'FanMode': 0}]
+		client = amdfan.BmcClient(username='dummy', password='dummy')
+		client.request = mock.Mock(side_effect=[{}, {'FanMode': 0}])
 		with self.assertRaises(amdfan.BmcError):
 			amdfan.BmcClient.full_speed(client)
 		client.request.assert_any_call(path='/api/fanctrl/mode', method='PUT', body={'FanMode': 3})

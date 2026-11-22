@@ -21,19 +21,22 @@ from typing import Any, Dict, List, Optional, Tuple
 # provisional points use the hottest edge, junction or memory sensor in Celsius
 # verify every blower starts at the minimum duty and validate under sustained load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
-	'quiet': [(0, 20), (50, 20), (60, 25), (70, 35), (75, 50), (80, 75), (85, 100)],
-	'balanced': [(0, 30), (45, 30), (55, 40), (65, 60), (75, 85), (80, 100)],
-	'performance': [(0, 45), (40, 45), (50, 60), (60, 80), (70, 100)],
+	'quiet': [(0, 10), (55, 10), (65, 18), (72, 28), (76, 40), (80, 60), (85, 100)],
+	'balanced': [(0, 15), (55, 15), (65, 24), (72, 38), (76, 55), (80, 75), (85, 100)],
+	'performance': [(0, 20), (55, 20), (65, 32), (72, 50), (76, 70), (80, 90), (85, 100)],
 }
+FULL_SPEED_PROFILE = 'full-speed'
+PROFILE_NAMES = (*PROFILES, FULL_SPEED_PROFILE)
 EXPECTED_GPUS = 2
 REQUIRED_LABELS = ('edge', 'junction', 'mem')
 GPU_VENDOR = '0x1002'
 GPU_DEVICE = '0x73a1'
 INTERVAL_SECONDS = 5
 MAX_COOLDOWN_STEP_C = 3
-DEFAULT_PROFILE = 'balanced'
+DEFAULT_PROFILE = 'quiet'
 BMC_URL = 'https://kveikur.samskeyti.net'
 STATUS_PATH = Path('/run/amdfan/status.json')
+PROFILE_PATH = STATUS_PATH.with_name('profile')
 CREDENTIAL_NAME = 'bmc.json'
 FULL_SPEED_MODE = 3
 CUSTOM_MODE = 4
@@ -115,6 +118,9 @@ class BmcClient:
 
 	def full_speed(self) -> None:
 		self.request(path='/api/fanctrl/mode', method='PUT', body={'FanMode': FULL_SPEED_MODE})
+		self.verify_full_speed()
+
+	def verify_full_speed(self) -> None:
 		mode = self.request(path='/api/fanctrl/mode')
 		if not isinstance(mode, dict) or mode.get('FanMode') != FULL_SPEED_MODE:
 			raise BmcError('BMC full-speed mode readback mismatch')
@@ -122,10 +128,11 @@ class BmcClient:
 
 def bmc_from_credential() -> BmcClient:
 	directory = os.environ.get('CREDENTIALS_DIRECTORY')
-	if not directory:
-		raise BmcError('systemd BMC credential is unavailable')
+	credential = Path(directory) / CREDENTIAL_NAME if directory else Path.home() / '.creds/kveikur-bmc'
 	try:
-		data = json.loads((Path(directory) / CREDENTIAL_NAME).read_text(encoding='utf-8'))
+		if credential.is_symlink():
+			raise ValueError('credential is a symlink')
+		data = json.loads(credential.read_text(encoding='utf-8'))
 		username, password = data['username'], data['password']
 		if not isinstance(username, str) or not username or not isinstance(password, str) or not password:
 			raise ValueError('invalid credential')
@@ -134,31 +141,18 @@ def bmc_from_credential() -> BmcClient:
 		raise BmcError('cannot load BMC credential') from exc
 
 
-def profile_path() -> Path:
-	state = os.environ.get('XDG_STATE_HOME')
-	return Path(state) / 'amdfan' / 'profile' if state else Path.home() / '.local/state/amdfan/profile'
-
-
 def read_profile(*, path: Path) -> str:
 	try:
 		name = path.read_text(encoding='utf-8').strip()
 	except FileNotFoundError:
 		return DEFAULT_PROFILE
-	if name not in PROFILES:
+	if name not in PROFILE_NAMES:
 		raise ValueError('invalid saved profile')
 	return name
 
 
-def profile_revision(*, path: Path) -> Optional[Tuple[int, int, int]]:
-	try:
-		info = path.stat()
-		return (info.st_dev, info.st_ino, info.st_mtime_ns)
-	except FileNotFoundError:
-		return None
-
-
 def select_profile(*, path: Path, name: str) -> None:
-	if name not in PROFILES:
+	if name not in PROFILE_NAMES:
 		raise ValueError('invalid profile')
 	path.parent.mkdir(parents=True, exist_ok=True)
 	# replace an existing state file atomically without following its final symlink
@@ -211,6 +205,8 @@ def read_gpus(*, root: Path) -> List[dict]:
 
 
 def duty_for(*, profile: str, temperature_c: float) -> int:
+	if profile == FULL_SPEED_PROFILE:
+		return 100
 	points = PROFILES[profile]
 	if temperature_c <= points[0][0]:
 		return points[0][1]
@@ -307,32 +303,36 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient)
 		mode = client.request(path='/api/fanctrl/mode')
 		if not isinstance(mode, dict) or mode.get('FanMode') not in (0, FULL_SPEED_MODE, CUSTOM_MODE):
 			raise BmcError('BMC fan mode is unavailable or unsupported')
-		paused = mode['FanMode'] == FULL_SPEED_MODE
-		initial_revision = profile_revision(path=path)
-		notify(message='READY=1')
 		while not stopping:
-			if paused:
-				if profile_revision(path=path) == initial_revision:
-					write_status(path=status_path, result={'service_ready': True, 'control_enabled': False, 'error': 'BMC is in full-speed mode; select a profile to resume'})
-					notify(message='WATCHDOG=1')
-					time.sleep(INTERVAL_SECONDS)
-					continue
-				paused = False
-			result = sample(path=path, root=root, previous_temperature_c=previous)
-			if 'error' in result:
-				raise SensorError(result['error'])
+			profile = read_profile(path=path)
+			if last_profile == FULL_SPEED_PROFILE:
+				client.verify_full_speed()
+			elif last_duty is not None:
+				client.verify_duty(duty=last_duty)
 			if stopping:
 				break
-			previous = result['control_c']
-			duty = result['proposed_duty_percent']
-			now = time.monotonic()
-			if last_duty is not None:
-				client.verify_duty(duty=last_duty)
-			if last_duty is None or result['profile'] != last_profile or duty >= last_duty + MIN_DUTY_CHANGE or (duty <= last_duty - MIN_DUTY_CHANGE and now - last_write >= MAX_UPDATE_DELAY_SECONDS):
-				client.set_duty(duty=duty)
-				last_duty, last_profile, last_write = duty, result['profile'], now
-			result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty)
+			first = last_profile is None
+			if profile == FULL_SPEED_PROFILE:
+				if last_profile != profile:
+					client.full_speed()
+				previous, last_duty = None, 100
+				result = {'profile': profile, 'proposed_duty_percent': 100}
+			else:
+				result = evaluate(profile=profile, gpus=read_gpus(root=root), previous_temperature_c=previous)
+				if stopping:
+					break
+				previous = result['control_c']
+				duty = result['proposed_duty_percent']
+				now = time.monotonic()
+				if last_duty is None or profile != last_profile or duty == 100 > last_duty or duty >= last_duty + MIN_DUTY_CHANGE or (duty <= last_duty - MIN_DUTY_CHANGE and now - last_write >= MAX_UPDATE_DELAY_SECONDS):
+					client.set_duty(duty=duty)
+					last_duty, last_write = duty, now
+			last_profile = profile
+			result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty,
+				bmc_mode='full-speed' if profile == FULL_SPEED_PROFILE else 'customized')
 			write_status(path=status_path, result=result)
+			if first:
+				notify(message='READY=1')
 			notify(message='WATCHDOG=1')
 			if not stopping:
 				time.sleep(INTERVAL_SECONDS)
@@ -428,10 +428,10 @@ def run_host_watchdog(*, client: BmcClient) -> int:
 
 def main() -> int:
 	parser = argparse.ArgumentParser(description='control the Radeon GPU fan hub')
-	parser.add_argument('command', choices=(*PROFILES, 'status', 'monitor', 'host-watchdog', 'emergency'))
+	parser.add_argument('command', choices=(*PROFILE_NAMES, 'status', 'monitor', 'host-watchdog', 'emergency'))
 	args = parser.parse_args()
-	path = profile_path()
-	if args.command in PROFILES:
+	path = PROFILE_PATH
+	if args.command in PROFILE_NAMES:
 		current = read_status(path=STATUS_PATH)
 		if not current or not current.get('service_ready'):
 			print('fan service is unavailable; profile was not changed', file=sys.stderr)

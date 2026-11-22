@@ -7,8 +7,8 @@ Wants=network-online.target
 Type=notify
 User=dante
 Environment=HOME=/home/dante
-LoadCredential=bmc.json:/etc/amdfan/bmc.json
 RuntimeDirectory=amdfan
+RuntimeDirectoryPreserve=yes
 ExecStart=/usr/bin/python3 /docker/radeon-vm/bin/amdfan.py monitor
 ExecStopPost=/usr/bin/python3 /docker/radeon-vm/bin/amdfan.py emergency
 Restart=no
