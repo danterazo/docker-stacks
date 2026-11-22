@@ -1,14 +1,15 @@
+FROM caddy:builder AS builder
+
+# build caddy with the specified plugins, caching go dependencies and build artifacts
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    xcaddy build \
+    --with github.com/caddy-dns/cloudflare \
+    --with github.com/greenpau/caddy-security
+
 FROM caddy:alpine
 
-# full caddy URL, with desired plugins
-ARG TARGETARCH
-ARG CADDY_URL="https://caddyserver.com/api/download?os=linux&arch=${TARGETARCH}\
-&p=github.com/caddy-dns/cloudflare\
-&p=github.com/greenpau/caddy-security"
-
-# download and install caddy with the specified plugins
-RUN wget --user-agent="curl/8.0" -O /usr/bin/caddy "${CADDY_URL}" \
-    && chmod +x /usr/bin/caddy
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 # validate install
 RUN /usr/bin/caddy version \
