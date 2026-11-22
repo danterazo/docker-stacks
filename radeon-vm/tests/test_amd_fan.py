@@ -131,7 +131,7 @@ class FanTests(unittest.TestCase):
 		gpus = amdfan.read_gpus(root=self.hwmon)
 		result = amdfan.evaluate(profile='quiet', gpus=gpus, previous_temperature_c=70)
 		self.assertEqual(result['control_c'], 67)
-		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 60)
+		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 35)
 		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=85), 100)
 		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=110), 100)
 
@@ -152,7 +152,14 @@ class FanTests(unittest.TestCase):
 			self.assertEqual(duties[-1], 100)
 			if temp <= 50:
 				self.assertEqual(duties[:3], [5, 5, 5])
-		self.assertEqual(amdfan.PROFILES['quiet'], [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)])
+		self.assertEqual(amdfan.PROFILES, {
+			'quiet': [(0, 5), (55, 5), (60, 5), (65, 8), (70, 10), (72, 12), (75, 16), (76, 20),
+				(78, 27), (80, 35), (81, 40), (82, 48), (83, 60), (84, 78), (85, 100)],
+			'balanced': [(0, 5), (53, 5), (55, 7), (60, 10), (65, 16), (70, 22), (72, 28), (75, 38),
+				(76, 43), (78, 54), (80, 65), (81, 70), (82, 76), (83, 83), (84, 91), (85, 100)],
+			'performance': [(0, 5), (50, 5), (55, 9), (60, 15), (65, 22), (70, 30), (72, 38), (74, 45),
+				(76, 55), (77, 63), (78, 70), (80, 78), (81, 82), (82, 87), (83, 91), (84, 96), (85, 100)],
+		})
 
 	def test_small_decrease_returns_to_idle_floor_after_cooldown(self):
 		for profile in amdfan.PROFILES:
@@ -438,7 +445,7 @@ class FanTests(unittest.TestCase):
 			with self.assertRaises(KeyboardInterrupt):
 				amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=status, client=client)
 		client.verify_duty.assert_called_once_with(duty=5)
-		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5), mock.call(duty=12), mock.call(duty=5)])
+		self.assertEqual(client.set_duty.call_args_list, [mock.call(duty=5), mock.call(duty=9), mock.call(duty=5)])
 
 	def test_sensor_loss_during_bmc_outage_still_fails_high(self):
 		client = mock.Mock()

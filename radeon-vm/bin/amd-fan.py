@@ -23,9 +23,12 @@ from typing import Any, Dict, List, Optional, Tuple
 # provisional points use the hottest edge, junction or memory sensor in Celsius
 # verify every blower starts at the minimum duty and validate under sustained load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
-	'quiet': [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)],
-	'balanced': [(0, 5), (53, 5), (55, 8), (65, 24), (72, 38), (76, 55), (80, 75), (85, 100)],
-	'performance': [(0, 5), (50, 5), (55, 12), (65, 32), (72, 50), (76, 70), (80, 90), (85, 100)],
+	'quiet': [(0, 5), (55, 5), (60, 5), (65, 8), (70, 10), (72, 12), (75, 16), (76, 20),
+		(78, 27), (80, 35), (81, 40), (82, 48), (83, 60), (84, 78), (85, 100)],
+	'balanced': [(0, 5), (53, 5), (55, 7), (60, 10), (65, 16), (70, 22), (72, 28), (75, 38),
+		(76, 43), (78, 54), (80, 65), (81, 70), (82, 76), (83, 83), (84, 91), (85, 100)],
+	'performance': [(0, 5), (50, 5), (55, 9), (60, 15), (65, 22), (70, 30), (72, 38), (74, 45),
+		(76, 55), (77, 63), (78, 70), (80, 78), (81, 82), (82, 87), (83, 91), (84, 96), (85, 100)],
 }
 FULL_SPEED_PROFILE = 'full-speed'
 PROFILE_NAMES = (*PROFILES, FULL_SPEED_PROFILE)
