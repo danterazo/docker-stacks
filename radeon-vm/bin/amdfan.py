@@ -48,6 +48,8 @@ MIN_DUTY_CHANGE = 3
 HOST_POLL_SECONDS = 10
 HOST_FAILURE_LIMIT = 3
 READ_RETRY_DELAY_SECONDS = 0.5
+READ_TIMEOUT_HOLD_SECONDS = 30
+READ_TIMEOUT_MAX_TEMP_C = 75
 LOG = logging.getLogger('amdfan')
 
 
@@ -61,6 +63,10 @@ class BmcError(Exception):
 
 class BmcTransientReadError(BmcError):
 	"""A BMC read failed in a way that may clear on retry."""
+
+
+class BmcReadTimeout(BmcTransientReadError):
+	"""The last BMC setting could not be checked before the read timed out."""
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -95,7 +101,11 @@ class BmcClient:
 				return json.load(response)
 		# log only the HTTP status or error type, never bodies or credentials
 		except urllib.error.HTTPError as exc:
-			error = BmcTransientReadError if method == 'GET' and exc.code in (408, 500, 502, 503, 504) else BmcError
+			error = BmcError
+			if method == 'GET' and exc.code in (408, 504):
+				error = BmcReadTimeout
+			elif method == 'GET' and exc.code in (500, 502, 503):
+				error = BmcTransientReadError
 			exc.close()
 			raise error(f'BMC {method} {path} failed: HTTP {exc.code}') from exc
 		except (OSError, ValueError, http.client.HTTPException) as exc:
@@ -104,6 +114,8 @@ class BmcClient:
 				(isinstance(cause, socket.gaierror) and cause.errno == socket.EAI_AGAIN) or
 				(isinstance(cause, OSError) and cause.errno in (errno.EHOSTUNREACH, errno.ENETUNREACH)))
 			error = BmcTransientReadError if method == 'GET' and transient else BmcError
+			if method == 'GET' and isinstance(cause, TimeoutError):
+				error = BmcReadTimeout
 			raise error(f'BMC {method} {path} failed: {type(cause).__name__}') from exc
 
 	def login(self) -> None:
@@ -349,6 +361,17 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 	last_profile: Optional[str] = None
 	telemetry_seen = False
 	last_write = 0.0
+	last_verified = 0.0
+	readback_degraded = False
+
+	def sample_adaptive(*, profile: str) -> dict:
+		nonlocal telemetry_seen
+		gpus = read_temperatures(root=root, pci_root=pci_root)
+		if telemetry_seen and not gpus:
+			raise SensorError('lost readings from both V620s after monitoring started')
+		telemetry_seen = telemetry_seen or bool(gpus)
+		return evaluate(profile=profile, gpus=gpus, previous_temperature_c=previous)
+
 	try:
 		client.login()
 		mode = client.request(path='/api/fanctrl/mode')
@@ -356,8 +379,35 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 			raise BmcError('BMC fan mode is unavailable or unsupported')
 		while not stopping:
 			profile = read_profile(path=path)
-			if last_duty is not None:
-				verify_running_setting(client=client, duty=last_duty, full_speed=last_profile == FULL_SPEED_PROFILE)
+			if last_duty is not None and last_profile is not None:
+				if readback_degraded and time.monotonic() - last_verified >= READ_TIMEOUT_HOLD_SECONDS:
+					raise BmcError('BMC readback timeout hold expired')
+				try:
+					verify_running_setting(client=client, duty=last_duty, full_speed=last_profile == FULL_SPEED_PROFILE)
+				except BmcReadTimeout as exc:
+					if stopping:
+						break
+					if last_profile == FULL_SPEED_PROFILE:
+						result = {'profile': last_profile, 'proposed_duty_percent': 100}
+					else:
+						result = sample_adaptive(profile=last_profile)
+						if result['hottest_c'] is not None and result['hottest_c'] >= READ_TIMEOUT_MAX_TEMP_C:
+							raise BmcError(f'BMC readback timed out with GPU at or above {READ_TIMEOUT_MAX_TEMP_C}°C') from exc
+					remaining = READ_TIMEOUT_HOLD_SECONDS - (time.monotonic() - last_verified)
+					if remaining <= 0:
+						raise BmcError('BMC readback timeout hold expired') from exc
+					if not readback_degraded:
+						LOG.warning('BMC readback timed out; holding last confirmed %s setting at %s%%', last_profile, last_duty)
+					readback_degraded = True
+					result.update(service_ready=True, control_enabled=True, readback_degraded=True,
+						last_verified_duty_percent=last_duty, pending_profile=profile if profile != last_profile else None)
+					write_status(path=status_path, result=result)
+					notify(message='WATCHDOG=1')
+					time.sleep(min(INTERVAL_SECONDS, remaining))
+					continue
+				if readback_degraded:
+					LOG.info('BMC readback recovered under %s', last_profile)
+				readback_degraded = False
 			if stopping:
 				break
 			first = last_profile is None
@@ -367,11 +417,7 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 				previous, last_duty = None, 100
 				result = {'profile': profile, 'proposed_duty_percent': 100}
 			else:
-				gpus = read_temperatures(root=root, pci_root=pci_root)
-				if telemetry_seen and not gpus:
-					raise SensorError('lost readings from both V620s after monitoring started')
-				telemetry_seen = telemetry_seen or bool(gpus)
-				result = evaluate(profile=profile, gpus=gpus, previous_temperature_c=previous)
+				result = sample_adaptive(profile=profile)
 				if stopping:
 					break
 				previous = result['control_c']
@@ -381,6 +427,7 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient,
 					client.set_duty(duty=duty)
 					last_duty, last_write = duty, now
 			last_profile = profile
+			last_verified = time.monotonic()
 			result.update(service_ready=True, control_enabled=True, verified_requested_duty_percent=last_duty,
 				bmc_mode='full-speed' if profile == FULL_SPEED_PROFILE else 'customized')
 			write_status(path=status_path, result=result)
@@ -498,7 +545,7 @@ def main() -> int:
 		deadline = time.monotonic() + 25
 		while time.monotonic() < deadline:
 			current = read_status(path=STATUS_PATH)
-			if current and current.get('control_enabled') and current.get('profile') == args.command and current['updated_monotonic'] >= requested_at:
+			if current and current.get('control_enabled') and not current.get('readback_degraded') and current.get('profile') == args.command and current['updated_monotonic'] >= requested_at:
 				if current.get('sensor_state') == 'no-driver-bound-gpus':
 					print(f"no driver-bound V620s; quiet fallback, BMC requested duty {current['verified_requested_duty_percent']}%")
 				else:
