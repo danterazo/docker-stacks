@@ -7,7 +7,8 @@ Wants=network-online.target
 Type=notify
 LoadCredential=bmc.json:/root/.creds/kveikur-bmc
 ExecStart=/usr/bin/python3 /usr/local/lib/amdfan/amdfan.py host-watchdog
-ExecStopPost=/usr/bin/python3 /usr/local/lib/amdfan/amdfan.py emergency
+# systemd may discard the credential directory before the stop hook runs.
+ExecStopPost=/usr/bin/env -u CREDENTIALS_DIRECTORY /usr/bin/python3 /usr/local/lib/amdfan/amdfan.py emergency
 Restart=no
 WatchdogSec=60
 
