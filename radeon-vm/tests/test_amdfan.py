@@ -47,7 +47,7 @@ class FanTests(unittest.TestCase):
 		result = amdfan.evaluate(profile='quiet', gpus=gpus)
 		self.assertEqual(len(gpus), 2)
 		self.assertEqual(result['hottest_c'], 55)
-		self.assertEqual(result['proposed_duty_percent'], 28)
+		self.assertEqual(result['proposed_duty_percent'], 22)
 		self.assertFalse(result['control_enabled'])
 
 	def test_missing_gpu_or_sensor_is_fail_high_proposal(self):
@@ -81,7 +81,7 @@ class FanTests(unittest.TestCase):
 		self.assertIn('error', result)
 
 	def test_cli_quiet_sets_only_the_test_profile(self):
-		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 10, 'updated_monotonic': float('inf')}
+		state = {'service_ready': True, 'control_enabled': True, 'profile': 'quiet', 'verified_requested_duty_percent': 20, 'updated_monotonic': float('inf')}
 		out = io.StringIO()
 		with mock.patch.object(sys, 'argv', ['amdfan', 'quiet']), mock.patch.object(amdfan, 'profile_path', return_value=self.state), mock.patch.object(amdfan, 'read_status', return_value=state), contextlib.redirect_stdout(out):
 			self.assertEqual(amdfan.main(), 0)
@@ -97,8 +97,17 @@ class FanTests(unittest.TestCase):
 		gpus = amdfan.read_gpus(root=self.hwmon)
 		result = amdfan.evaluate(profile='quiet', gpus=gpus, previous_temperature_c=70)
 		self.assertEqual(result['control_c'], 67)
-		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 100)
+		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=80), 75)
+		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=85), 100)
 		self.assertEqual(amdfan.duty_for(profile='quiet', temperature_c=110), 100)
+
+	def test_profiles_are_monotonic_and_keep_minimum_and_headroom(self):
+		for profile in amdfan.PROFILES:
+			with self.subTest(profile=profile):
+				duties = [amdfan.duty_for(profile=profile, temperature_c=temp) for temp in range(101)]
+				self.assertEqual(duties, sorted(duties))
+				self.assertGreaterEqual(min(duties), 20)
+				self.assertEqual(duties[85], 100)
 
 	def test_fake_bmc_curve_format_and_global_side_effect(self):
 		class FakeBMC:
