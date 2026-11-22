@@ -53,7 +53,7 @@ services:
       - --language-model-only
       - --skip-mm-profiling
       - --default-chat-template-kwargs
-      - '{"reasoning_effort":"medium"}'
+      - '{"reasoning_effort":"low"}'
       # The chat template starts thinking in the prompt; split generated reasoning.
       - --reasoning-parser
       - qwen3
