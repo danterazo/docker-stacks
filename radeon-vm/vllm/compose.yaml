@@ -18,9 +18,9 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - ./data/:/state/:rw
-      # Use the already-mounted NAS; do not silently create an empty path.
+      # Choose the NAS or local model disk; never create a missing checkpoint.
       - type: bind
-        source: /tank/models/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}
+        source: ${VLLM_MODEL_ROOT:-/tank/models}/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a local Hugging Face checkpoint}
         target: /model
         read_only: true
         bind:

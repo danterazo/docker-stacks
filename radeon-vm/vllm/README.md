@@ -3,11 +3,11 @@
 The Compose service serves a local Hugging Face safetensors checkpoint over
 the OpenAI-compatible API on `192.168.30.105:8000`. The endpoint has no API
 key configured; restrict network access to trusted clients. `/tank/models` must
-be mounted before starting the service. The checkpoint is mounted read-only;
+be mounted when serving a NAS checkpoint. The checkpoint is mounted read-only;
 `data/` contains writable caches. The Ollama Compose service was removed;
 its model volume and local identity data were retained.
 
-The configured model and its path are in `.env`. The default is now
+The configured model and its path are in `.env`. The default is
 Qwen3.8-27B GPTQ, text only, configured for 262,144 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
@@ -68,6 +68,34 @@ minutes and can use swap on this VM. The older Qwen3-32B-AWQ checkpoint was
 removed after its GPTQ alternative was downloaded. Change
 `VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and any necessary
 runtime settings in `.env`, then recreate with `docker compose up -d`.
+
+## Local and NAS models
+
+`VLLM_MODEL_ROOT` selects one model library per service instance, either the
+VM's dedicated disk at `/srv/vllm-models` or the read-only NAS at
+`/tank/models`. `VLLM_MODEL_DIR` is the checkpoint path relative to that root;
+the service mounts only the selected checkpoint, not both entire libraries.
+The local disk is excluded from Proxmox VM backups but inherits the host's ZFS
+snapshot policy; treat its contents as a cache, not a PBS backup. Other NAS models stay
+where they are. Changing roots or models requires recreating the service.
+
+Edit the `MODELS` list near the top of `download-models.py` to select public
+Hugging Face model IDs or URLs. Append `@<commit>` to pin a revision; without
+one, the script resolves the current `main` revision. Mount the local disk and
+run:
+
+```bash
+cd /docker/radeon-vm/vllm
+python3 download-models.py
+```
+
+The script uses the existing vLLM image, without a GPU or a host Python
+package. Repeated runs quickly verify existing files against Hugging Face
+metadata and sizes; this is not a full content checksum. It refuses to overwrite
+an incomplete or mismatched checkpoint, resumes its own partial downloads, and
+promotes them only after verification. It needs internet access; the current
+Qwen checkpoint requires roughly 20 GiB of free space. Select the local root
+and checkpoint in `.env`, then recreate the service.
 
 For four cards, first validate passthrough, cooling, PSU headroom and ROCm
 visibility for all four; then set `VLLM_TENSOR_PARALLEL_SIZE: 4` and recreate
