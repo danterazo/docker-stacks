@@ -139,3 +139,6 @@ fi
 if command -v starship >/dev/null 2>&1 && [[ -r /configs/starship/init.sh ]] && source /configs/starship/init.sh; then
 	eval "$(starship init bash)"
 fi
+
+# opencode
+export PATH=/home/dante/.opencode/bin:$PATH
