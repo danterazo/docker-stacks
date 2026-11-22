@@ -26,6 +26,8 @@ class FanTests(unittest.TestCase):
 		self.root = Path(self.temp.name)
 		self.hwmon = self.root / 'hwmon'
 		self.hwmon.mkdir()
+		self.pci = self.root / 'pci'
+		self.pci.mkdir()
 		self.state = self.root / 'state' / 'profile'
 		for index in range(2):
 			self.make_gpu(index)
@@ -35,6 +37,7 @@ class FanTests(unittest.TestCase):
 		device.mkdir()
 		(device / 'vendor').write_text('0x1002\n')
 		(device / 'device').write_text('0x73a1\n')
+		(self.pci / device.name).symlink_to(device, target_is_directory=True)
 		monitor = self.hwmon / f'hwmon{index}'
 		monitor.mkdir()
 		(monitor / 'name').write_text('amdgpu\n')
@@ -62,6 +65,36 @@ class FanTests(unittest.TestCase):
 		(self.hwmon / 'hwmon1' / 'name').write_text('other')
 		with self.assertRaises(amdfan.SensorError):
 			amdfan.read_gpus(root=self.hwmon)
+
+	def test_unbound_v620s_default_to_quiet_duty(self):
+		empty = self.root / 'empty-hwmon'
+		empty.mkdir()
+		result = amdfan.sample(path=self.state, root=empty, pci_root=self.pci)
+		self.assertEqual(result['profile'], 'quiet')
+		self.assertEqual(result['proposed_duty_percent'], 10)
+		self.assertEqual(result['sensor_state'], 'no-driver-bound-gpus')
+		amdfan.select_profile(path=self.state, name='performance')
+		result = amdfan.sample(path=self.state, root=empty, pci_root=self.pci)
+		self.assertEqual(result['effective_profile'], 'quiet')
+		self.assertEqual(result['proposed_duty_percent'], 10)
+
+	def test_zero_readings_with_a_bound_driver_is_not_quiet_fallback(self):
+		empty = self.root / 'empty-hwmon'
+		empty.mkdir()
+		(self.root / '0000:01:00.0' / 'driver').symlink_to('/sys/bus/pci/drivers/amdgpu')
+		result = amdfan.sample(path=self.state, root=empty, pci_root=self.pci)
+		self.assertEqual(result['proposed_duty_percent'], 100)
+		self.assertIn('driver-bound V620', result['error'])
+
+	def test_losing_both_gpus_after_valid_telemetry_fails_high(self):
+		client = mock.Mock()
+		client.request.return_value = {'FanMode': 3}
+		gpus = amdfan.read_gpus(root=self.hwmon)
+		with mock.patch.object(amdfan.signal, 'signal'), mock.patch.object(amdfan.time, 'sleep'), mock.patch.object(amdfan, 'read_temperatures', side_effect=[gpus, []]):
+			result = amdfan.run_monitor(path=self.state, root=self.hwmon, status_path=self.root / 'status.json', client=client)
+		self.assertEqual(result, 1)
+		client.set_duty.assert_called_once_with(duty=10)
+		client.full_speed.assert_called_once()
 
 	def test_implausible_and_duplicate_labels_fail(self):
 		(self.hwmon / 'hwmon0' / 'temp1_input').write_text('999999')

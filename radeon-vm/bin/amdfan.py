@@ -37,6 +37,7 @@ DEFAULT_PROFILE = 'quiet'
 BMC_URL = 'https://kveikur.samskeyti.net'
 STATUS_PATH = Path('/run/amdfan/status.json')
 PROFILE_PATH = STATUS_PATH.with_name('profile')
+PCI_ROOT = Path('/sys/bus/pci/devices')
 CREDENTIAL_NAME = 'bmc.json'
 FULL_SPEED_MODE = 3
 CUSTOM_MODE = 4
@@ -166,10 +167,10 @@ def select_profile(*, path: Path, name: str) -> None:
 			temp.unlink()
 
 
-def read_gpus(*, root: Path) -> List[dict]:
+def read_gpus(*, root: Path, allow_empty: bool = False) -> List[dict]:
 	devices: Dict[str, dict] = {}
 	try:
-		entries = sorted(root.glob('hwmon*'))
+		entries = sorted(path for path in root.iterdir() if path.name.startswith('hwmon'))
 		for path in entries:
 			try:
 				if (path / 'name').read_text(encoding='utf-8').strip() != 'amdgpu':
@@ -199,9 +200,22 @@ def read_gpus(*, root: Path) -> List[dict]:
 				raise SensorError(f'cannot read GPU sensor {path.name}: {exc}') from exc
 	except OSError as exc:
 		raise SensorError(f'cannot enumerate hwmon: {exc}') from exc
-	if len(devices) != EXPECTED_GPUS:
+	if len(devices) != EXPECTED_GPUS and not (allow_empty and not devices):
 		raise SensorError(f'expected {EXPECTED_GPUS} V620 GPUs, found {len(devices)}')
 	return [devices[key] for key in sorted(devices)]
+
+
+def read_temperatures(*, root: Path, pci_root: Path) -> List[dict]:
+	gpus = read_gpus(root=root, allow_empty=True)
+	if not gpus:
+		try:
+			for device in pci_root.iterdir():
+				if ((device / 'vendor').read_text().strip() == GPU_VENDOR and
+						(device / 'device').read_text().strip() == GPU_DEVICE and (device / 'driver').is_symlink()):
+					raise SensorError('driver-bound V620 without temperature readings')
+		except OSError as exc:
+			raise SensorError('cannot verify V620 driver state') from exc
+	return gpus
 
 
 def duty_for(*, profile: str, temperature_c: float) -> int:
@@ -228,6 +242,11 @@ def draft_bmc_curve(*, duty: int) -> dict:
 
 
 def evaluate(*, profile: str, gpus: List[dict], previous_temperature_c: Optional[float] = None) -> dict:
+	if not gpus:
+		effective = FULL_SPEED_PROFILE if profile == FULL_SPEED_PROFILE else DEFAULT_PROFILE
+		return {'profile': profile, 'effective_profile': effective, 'gpus': [],
+			'hottest_c': None, 'control_c': None, 'proposed_duty_percent': duty_for(profile=effective, temperature_c=0),
+			'control_enabled': False, 'sensor_state': 'no-driver-bound-gpus'}
 	max_temp = max(value for gpu in gpus for value in gpu['temperatures_c'].values())
 	# increase immediately; limit how fast the control temperature decreases
 	control_temp = max_temp
@@ -243,9 +262,9 @@ def evaluate(*, profile: str, gpus: List[dict], previous_temperature_c: Optional
 	}
 
 
-def sample(*, path: Path, root: Path, previous_temperature_c: Optional[float] = None) -> dict:
+def sample(*, path: Path, root: Path, previous_temperature_c: Optional[float] = None, pci_root: Path = PCI_ROOT) -> dict:
 	try:
-		return evaluate(profile=read_profile(path=path), gpus=read_gpus(root=root), previous_temperature_c=previous_temperature_c)
+		return evaluate(profile=read_profile(path=path), gpus=read_temperatures(root=root, pci_root=pci_root), previous_temperature_c=previous_temperature_c)
 	except (SensorError, OSError, ValueError) as exc:
 		return {'control_enabled': False, 'error': str(exc), 'proposed_duty_percent': 100}
 
@@ -285,7 +304,7 @@ def read_status(*, path: Path) -> Optional[dict]:
 		return None
 
 
-def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient) -> int:
+def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient, pci_root: Path = PCI_ROOT) -> int:
 	stopping = False
 
 	def stop(_signum: int, _frame: object) -> None:
@@ -297,6 +316,7 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient)
 	previous: Optional[float] = None
 	last_duty: Optional[int] = None
 	last_profile: Optional[str] = None
+	telemetry_seen = False
 	last_write = 0.0
 	try:
 		client.login()
@@ -318,7 +338,11 @@ def run_monitor(*, path: Path, root: Path, status_path: Path, client: BmcClient)
 				previous, last_duty = None, 100
 				result = {'profile': profile, 'proposed_duty_percent': 100}
 			else:
-				result = evaluate(profile=profile, gpus=read_gpus(root=root), previous_temperature_c=previous)
+				gpus = read_temperatures(root=root, pci_root=pci_root)
+				if telemetry_seen and not gpus:
+					raise SensorError('lost readings from both V620s after monitoring started')
+				telemetry_seen = telemetry_seen or bool(gpus)
+				result = evaluate(profile=profile, gpus=gpus, previous_temperature_c=previous)
 				if stopping:
 					break
 				previous = result['control_c']
@@ -446,7 +470,10 @@ def main() -> int:
 		while time.monotonic() < deadline:
 			current = read_status(path=STATUS_PATH)
 			if current and current.get('control_enabled') and current.get('profile') == args.command and current['updated_monotonic'] >= requested_at:
-				print(f"{args.command} active; BMC requested duty {current['verified_requested_duty_percent']}%")
+				if current.get('sensor_state') == 'no-driver-bound-gpus':
+					print(f"no driver-bound V620s; quiet fallback, BMC requested duty {current['verified_requested_duty_percent']}%")
+				else:
+					print(f"{args.command} active; BMC requested duty {current['verified_requested_duty_percent']}%")
 				return 0
 			time.sleep(1)
 		print(f'{args.command} saved, but the service did not confirm application', file=sys.stderr)
