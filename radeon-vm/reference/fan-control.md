@@ -14,6 +14,10 @@
   GPU temperatures; do not substitute a blind 5% setting on lost telemetry
   or overheating. The host's existing Full Speed fallback remains in place
   until a temperature-aware or separately validated fallback is available.
+- Kveikur's `amd-fan-host.service` profile block matches `77a28be`, but the
+  unit remains disabled/inactive for the future VM-to-LXC cutover. Keep
+  `amd-fan-watchdog.service` active; do not start the host controller alongside
+  the VM controller.
 
 ## Evidence and Measurement Limits
 
