@@ -17,6 +17,14 @@ if command -v direnv >/dev/null 2>&1; then
 fi
 
 # update PATH
+# leave login-shell PATH to the account profile
+if ! shopt -q login_shell && [[ -d "$HOME/.local/bin" ]]; then
+	case ":$PATH:" in
+	*":$HOME/.local/bin:"*) ;;
+	*) export PATH="$HOME/.local/bin:$PATH" ;;
+	esac
+fi
+
 case "${HOSTNAME%%.*}" in
 nvidia-vm)
 	export PATH="$PATH:/docker/plex-video:/docker/immich"
