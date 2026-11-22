@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply 200 W caps to host-owned Radeon Pro V620 cards
+After=systemd-modules-load.service systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/v620-powercap-host.py --watts 200
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
