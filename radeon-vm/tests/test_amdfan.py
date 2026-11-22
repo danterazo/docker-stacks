@@ -140,8 +140,16 @@ class FanTests(unittest.TestCase):
 			with self.subTest(profile=profile):
 				duties = [amdfan.duty_for(profile=profile, temperature_c=temp) for temp in range(101)]
 				self.assertEqual(duties, sorted(duties))
-				self.assertGreaterEqual(min(duties), 10)
+				self.assertGreaterEqual(min(duties), 5 if profile == 'quiet-5' else 10)
 				self.assertEqual(duties[85], 100)
+
+	def test_quiet_5_reduces_only_the_lower_ramp_and_is_not_the_default(self):
+		self.assertEqual(amdfan.read_profile(path=self.state), 'quiet')
+		trial = amdfan.PROFILES['quiet-5']
+		self.assertEqual(trial[:2], [(0, 5), (55, 5)])
+		self.assertEqual(trial[-2:], amdfan.PROFILES['quiet'][-2:])
+		for temp in range(80):
+			self.assertLessEqual(amdfan.duty_for(profile='quiet-5', temperature_c=temp), amdfan.duty_for(profile='quiet', temperature_c=temp))
 
 	def test_fake_bmc_curve_format_and_global_side_effect(self):
 		class FakeBMC:

@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # verify every blower starts at the minimum duty and validate under sustained load
 PROFILES: Dict[str, List[Tuple[int, int]]] = {
 	'quiet': [(0, 10), (55, 10), (65, 18), (72, 28), (76, 40), (80, 60), (85, 100)],
+	'quiet-5': [(0, 5), (55, 5), (65, 10), (72, 20), (76, 35), (80, 60), (85, 100)],
 	'balanced': [(0, 15), (55, 15), (65, 24), (72, 38), (76, 55), (80, 75), (85, 100)],
 	'performance': [(0, 20), (55, 20), (65, 32), (72, 50), (76, 70), (80, 90), (85, 100)],
 }
