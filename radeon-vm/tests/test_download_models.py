@@ -71,7 +71,7 @@ class ModelTests(unittest.TestCase):
 		self.assertFalse((self.root / 'language-models/hf_safetensors/org/one').exists())
 
 	def test_no_mount_is_rejected(self):
-		with mock.patch.object(manager, 'ROOT', self.root), \
+		with mock.patch.object(manager, 'DISK', self.root), \
 				mock.patch('os.path.ismount', return_value=False):
 			with self.assertRaises(ValueError):
 				manager.main()

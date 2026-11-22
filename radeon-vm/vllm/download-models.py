@@ -19,7 +19,7 @@ import sys
 import urllib.request
 from pathlib import Path, PurePosixPath
 
-ROOT = Path(os.environ.get('VLLM_LOCAL_MODEL_ROOT', '/srv/vllm-models'))
+DISK = Path(os.environ.get('VLLM_MODEL_DISK', '/models'))
 IMAGE = 'blivioniag/vllm-rdna:v0.31.0-extras'
 REPO_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$')
 REV_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]*$')
@@ -117,11 +117,14 @@ def manage(root, entries):
 
 
 def main():
-	if not ROOT.is_absolute() or not os.path.ismount(ROOT):
-		raise ValueError(f'Model disk is not mounted at an absolute path: {ROOT}')
-	with (ROOT / '.model-downloads.lock').open('a') as lock:
+	if not DISK.is_absolute() or not os.path.ismount(DISK):
+		raise ValueError(f'Model disk is not mounted at an absolute path: {DISK}')
+	root = DISK / 'vllm'
+	if not root.is_dir() or root.is_symlink():
+		raise ValueError(f'Local vLLM model directory is unavailable: {root}')
+	with (root / '.model-downloads.lock').open('a') as lock:
 		fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-		manage(ROOT, MODELS)
+		manage(root, MODELS)
 
 
 if __name__ == '__main__':

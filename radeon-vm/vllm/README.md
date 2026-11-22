@@ -2,10 +2,10 @@
 
 The Compose service serves a local Hugging Face safetensors checkpoint over
 the OpenAI-compatible API on `192.168.30.105:8000`. The endpoint has no API
-key configured; restrict network access to trusted clients. `/tank/models` must
-be mounted when serving a NAS checkpoint. The checkpoint is mounted read-only;
-`data/` contains writable caches. The Ollama Compose service was removed;
-its model volume and local identity data were retained.
+key configured; restrict network access to trusted clients. Both the local and
+NAS model libraries are mounted read-write as requested; restrict access to
+this container accordingly. `data/` contains writable caches. The Ollama
+Compose service was removed; its model volume and local identity data remain.
 
 The configured model and its path are in `.env`. The default is
 Qwen3.8-27B GPTQ, text only, configured for 262,144 tokens over two GPUs.
@@ -55,7 +55,7 @@ docker compose logs -f vllm
 curl http://192.168.30.105:8000/v1/models
 curl http://192.168.30.105:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -N -d '{"model":"qwen3.8-27b-gptq-benchmark","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
+  -N -d '{"model":"qwen3.8-27b-gptq","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
 The current settings in `.env` use two GPUs, 262144 tokens, one concurrent
@@ -63,21 +63,24 @@ sequence and a 0.9 per-GPU memory utilization target. This target is not a
 hard VRAM limit or a GPU reservation; competing inference processes can still
 cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
 are conservative settings, not performance tuning; AMD SMI reported P2P
-disabled between the two cards. Loading the GPTQ model from NFS takes several
-minutes and can use swap on this VM. The older Qwen3-32B-AWQ checkpoint was
+disabled between the two cards. Loading a model can use swap on this VM;
+loading the GPTQ model from NFS previously took several minutes. The older
+Qwen3-32B-AWQ checkpoint was
 removed after its GPTQ alternative was downloaded. Change
 `VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and any necessary
 runtime settings in `.env`, then recreate with `docker compose up -d`.
 
 ## Local and NAS models
 
-`VLLM_MODEL_ROOT` selects one model library per service instance, either the
-VM's dedicated disk at `/srv/vllm-models` or the read-only NAS at
-`/tank/models`. `VLLM_MODEL_DIR` is the checkpoint path relative to that root;
-the service mounts only the selected checkpoint, not both entire libraries.
-The local disk is excluded from Proxmox VM backups but inherits the host's ZFS
-snapshot policy; treat its contents as a cache, not a PBS backup. Other NAS models stay
-where they are. Changing roots or models requires recreating the service.
+The VM model disk is mounted at `/models`: its `vllm/` and `llama-cpp/`
+directories are separate local libraries. This container sees `/models/vllm`
+as `/models/local` and the Tank NFS named volume as `/models/nas`. Set
+`VLLM_MODEL_SOURCE` to `local` or `nas` and `VLLM_MODEL_DIR` to the checkpoint
+path relative to that library. The default is the local Qwen checkpoint.
+Both container mounts are writable, including the shared NAS. The local disk is
+excluded from Proxmox VM backups but inherits the host's ZFS snapshot policy;
+treat its contents as a cache, not a PBS backup. Changing the selected model
+requires recreating the service.
 
 Edit the `MODELS` list near the top of `download-models.py` to select public
 Hugging Face model IDs or URLs. Append `@<commit>` to pin a revision; without
@@ -95,7 +98,8 @@ metadata and sizes; this is not a full content checksum. It refuses to overwrite
 an incomplete or mismatched checkpoint, resumes its own partial downloads, and
 promotes them only after verification. It needs internet access; the current
 Qwen checkpoint requires roughly 20 GiB of free space. Select the local root
-and checkpoint in `.env`, then recreate the service.
+and checkpoint in `.env`, then recreate the service. Set `VLLM_MODEL_DISK` if
+the dedicated disk is mounted somewhere other than `/models`.
 
 For four cards, first validate passthrough, cooling, PSU headroom and ROCm
 visibility for all four; then set `VLLM_TENSOR_PARALLEL_SIZE: 4` and recreate
