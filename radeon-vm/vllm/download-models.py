@@ -89,12 +89,12 @@ def download(root, repo, sha, partial):
 	], check=True)
 
 
-def manage(root, entries):
+def manage(root, entries, model_subdir=Path('language-models/hf_safetensors')):
 	root = root.resolve()
 	for entry in entries:
 		repo, revision = parse_model(entry)
 		sha, files = model_info(repo, revision)
-		target = root / 'language-models/hf_safetensors' / repo
+		target = root / model_subdir / repo
 		partial = root / '.model-downloads' / repo / sha
 		# Do not follow a pre-existing directory symlink outside the model disk.
 		if not target.resolve().is_relative_to(root) or not partial.resolve().is_relative_to(root):
@@ -117,14 +117,22 @@ def manage(root, entries):
 
 
 def main():
-	if not DISK.is_absolute() or not os.path.ismount(DISK):
-		raise ValueError(f'Model disk is not mounted at an absolute path: {DISK}')
-	root = DISK / 'vllm'
+	model_root = os.environ.get('VLLM_MODEL_ROOT')
+	if model_root:
+		root = Path(model_root)
+		if not root.is_absolute() or not os.path.ismount(root):
+			raise ValueError(f'Model root is not mounted at an absolute path: {root}')
+		model_subdir = Path('.')
+	else:
+		if not DISK.is_absolute() or not os.path.ismount(DISK):
+			raise ValueError(f'Model disk is not mounted at an absolute path: {DISK}')
+		root = DISK / 'vllm'
+		model_subdir = Path('language-models/hf_safetensors')
 	if not root.is_dir() or root.is_symlink():
-		raise ValueError(f'Local vLLM model directory is unavailable: {root}')
+		raise ValueError(f'Local vLLM model root is unavailable: {root}')
 	with (root / '.model-downloads.lock').open('a') as lock:
 		fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-		manage(root, MODELS)
+		manage(root, MODELS, model_subdir=model_subdir)
 
 
 if __name__ == '__main__':
