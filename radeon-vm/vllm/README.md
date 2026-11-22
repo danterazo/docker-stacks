@@ -114,3 +114,19 @@ current checkpoint's XML tool-call template. When changing models, set
 `VLLM_TOOL_CALL_PARSER` in `.env` to a parser compatible with the new model's
 chat template before recreating the service. These are server settings and
 apply to all clients; OpenCode's `--auto` controls permission approval instead.
+
+The Compose command also enables `--reasoning-parser qwen3`. The checkpoint's
+chat template puts `<think>` in the prompt, so without the reasoning parser
+the generated reasoning and `</think>` appear in normal assistant content.
+After recreating the service, verify a streamed `/v1/chat/completions` response
+contains reasoning in a separate `reasoning` or `reasoning_content` delta and
+the answer in `content`. This has not yet been verified on this deployment.
+For a different model, select a reasoning parser compatible with its template
+instead of assuming the Qwen parser applies.
+
+OpenCode's vLLM discovery cannot infer tool support. Even with the server's
+tool parser enabled, check the selected model's OpenCode capabilities and
+explicitly enable tools there if needed. Validate actual tool calls before
+relying on them. The power-cap benchmark uses `/v1/completions`, not chat
+completions; do not compare runs across server configuration changes without
+recording the difference.

@@ -56,6 +56,11 @@ Use `FLASH_NEXT_PLE` for an alternate SSD-backed path; mount it before
 starting. Use `FLASH_NEXT_CONTEXT` to test 128K, then 262,144, after measuring
 available cache and actual throughput. `FLASH_NEXT_KV_BYTES` is a per-GPU
 cache budget; do not increase it without measuring free memory on every GPU.
+The Qwen chat template starts thinking in the prompt, so the stack selects
+the `qwen3` reasoning parser by default; `FLASH_NEXT_REASONING_PARSER` can
+override it for a compatible checkpoint. After startup, verify streamed chat
+responses separate reasoning from answer content. This parser configuration
+has not been tested with the Flash-Next stack.
 
 Verify streaming text correctness, TTFT, decode rate, then structured tool
 calls after enabling the appropriate tool parser. Record full prompt length,

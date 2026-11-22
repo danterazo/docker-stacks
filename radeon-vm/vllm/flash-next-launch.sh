@@ -52,4 +52,4 @@ exec bash /src/vllm/tools/rdna/serve_rdna.sh RECIPE=flashnext-mtp0 \
     TORCHINDUCTOR_CACHE_DIR=/state/flash-next/inductor TORCH_EXTENSIONS_DIR=/state/flash-next/extensions \
     NCCL_P2P_DISABLE=1 VLLM_RDNA_AR=0 VLLM_FORCE_CUSTOM_ALL_REDUCE=0 \
     'FEATURES=expert-parallel prefix-caching mamba-align language-model-only skip-mm-profiling' \
-    'EXTRA_ARGS=--disable-custom-all-reduce --kv-cache-dtype float16'
+    "EXTRA_ARGS=--disable-custom-all-reduce --kv-cache-dtype float16 --reasoning-parser ${FLASH_NEXT_REASONING_PARSER:-qwen3}"

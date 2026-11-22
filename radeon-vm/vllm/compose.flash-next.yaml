@@ -16,6 +16,7 @@ services:
       USER: vllm
       FLASH_NEXT_CONTEXT: '${FLASH_NEXT_CONTEXT:-32768}'
       FLASH_NEXT_KV_BYTES: '${FLASH_NEXT_KV_BYTES:-4026531840}'
+      FLASH_NEXT_REASONING_PARSER: '${FLASH_NEXT_REASONING_PARSER:-qwen3}'
     volumes:
       - type: bind
         source: ${FLASH_NEXT_MODEL:-/tank/models/language-models/hf_safetensors/wtdcode/Qwen3.8-Flash-Next-AWQ-W4A16}
