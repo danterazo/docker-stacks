@@ -8,7 +8,9 @@ services:
       - ${RENDER_GID:-991}
     restart: unless-stopped
     init: true
-    env_file: .env
+    env_file:
+      - .env
+      - .secrets
     shm_size: 4gb
     ports:
       - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${VLLM_PORT:-8000}:8000/tcp
@@ -45,10 +47,7 @@ services:
       # Use the QAT assistant head matched to the 31B target.
       - --speculative-config
       - >-
-        {"method":"mtp",
-        "model":"/models/local/google/gemma-4-31B-it-qat-q4_0-unquantized-assistant",
-        "num_speculative_tokens":3,
-        "draft_tensor_parallel_size":2}
+        {"method":"mtp", "model":"/models/local/google/gemma-4-31B-it-qat-q4_0-unquantized-assistant", "num_speculative_tokens":3, "draft_tensor_parallel_size":2}
       - --gpu-memory-utilization
       - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
       - --kv-cache-dtype
