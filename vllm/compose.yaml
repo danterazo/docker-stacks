@@ -8,6 +8,8 @@ services:
       - ${RENDER_GID:-991}
     restart: unless-stopped
     init: true
+    environment:
+      VLLM_API_KEY_NAMES: ${VLLM_API_KEY_NAMES:?Set VLLM_API_KEY_NAMES in .env}
     env_file:
       - .env
       - .secrets

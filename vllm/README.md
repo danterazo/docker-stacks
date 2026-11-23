@@ -1,13 +1,15 @@
 # Radeon vLLM
 
 The Compose service is configured to serve a local Hugging Face safetensors
-checkpoint over the OpenAI-compatible API on `192.168.30.150:8000`. The
-endpoint has no API key configured; restrict network access to trusted clients.
-The local model library is mounted read-write; the NAS library is not mounted.
-`data/` contains writable caches. LXC GPU inference has not yet been verified.
+checkpoint over the OpenAI-compatible API on `192.168.30.150:8000` and
+`https://vllm.samskeyti.net`. The endpoint requires a bearer token from
+`.secrets`; `VLLM_API_KEY_NAMES` in `.env` selects which client variables the
+service accepts. The local model library is mounted read-write; the NAS library
+is not mounted. `data/` contains writable caches.
 
 The configured model and its path are in `.env`. The default is
-Qwen3.8-27B GPTQ, text only, configured for 262,144 tokens over two GPUs.
+`google/gemma-4-E4B-it-qat-w4a16-ct`, served as `gemma-4-e4b-qat` with
+131,072 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
 DeepSeek-R1-Distill-Qwen-1.5B FP16 smoke-test checkpoint is now under
@@ -51,14 +53,16 @@ cd /docker/vllm
 docker compose config --quiet
 docker compose up -d
 docker compose logs -f vllm
-curl http://192.168.30.150:8000/v1/models
-curl http://192.168.30.150:8000/v1/chat/completions \
+curl https://vllm.samskeyti.net/v1/models \
+  -H "Authorization: Bearer $VLLM_API_KEY"
+curl https://vllm.samskeyti.net/v1/chat/completions \
+  -H "Authorization: Bearer $VLLM_API_KEY" \
   -H 'Content-Type: application/json' \
-  -N -d '{"model":"qwen3.8-27b-gptq","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
+  -N -d '{"model":"gemma-4-e4b-qat","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
-The current configuration requests two GPUs, 262144 tokens, up to five
-concurrent sequences and a 0.9 per-GPU memory utilization target. This target is not a
+The current configuration requests two GPUs, 131072 tokens, up to five
+concurrent sequences and a 0.80 per-GPU memory utilization target. This target is not a
 hard VRAM limit or a GPU reservation; competing inference processes can still
 cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
 are conservative settings, not performance tuning; AMD SMI reported P2P
@@ -90,13 +94,13 @@ file metadata and sizes, not full content hashes, and refuses to overwrite an
 incomplete or mismatched checkpoint. The local ZFS-backed model directory is
 shared from the Proxmox host; do not copy it into the LXC root filesystem.
 
-Automatic tool choice is enabled with the `qwen3_xml` parser, matching the
+Automatic tool choice is enabled with the `gemma4` parser, matching the
 current checkpoint's XML tool-call template. When changing models, set
 `VLLM_TOOL_CALL_PARSER` in `.env` to a parser compatible with the new model's
 chat template before recreating the service. These are server settings and
 apply to all clients; OpenCode's `--auto` controls permission approval instead.
 
-The Compose command also enables `--reasoning-parser qwen3`. The checkpoint's
+The Compose command also enables `--reasoning-parser gemma4`. The checkpoint's
 chat template puts `<think>` in the prompt, so without the reasoning parser
 the generated reasoning and `</think>` appear in normal assistant content.
 After recreating the service, verify a streamed `/v1/chat/completions` response
