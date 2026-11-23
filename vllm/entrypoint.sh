@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+: "${VLLM_API_KEY_OVEDUR:?VLLM_API_KEY_OVEDUR is required}"
+: "${VLLM_API_KEY_KEX:?VLLM_API_KEY_KEX is required}"
+: "${VLLM_API_KEY_CERULEAN:?VLLM_API_KEY_CERULEAN is required}"
+: "${VLLM_API_KEY_KVEIKUR:?VLLM_API_KEY_KVEIKUR is required}"
+: "${VLLM_API_KEY_NEOSERVER:?VLLM_API_KEY_NEOSERVER is required}"
+
+exec vllm "$@" \
+	--api-key \
+	"$VLLM_API_KEY_OVEDUR" \
+	"$VLLM_API_KEY_KEX" \
+	"$VLLM_API_KEY_CERULEAN" \
+	"$VLLM_API_KEY_KVEIKUR" \
+	"$VLLM_API_KEY_NEOSERVER"

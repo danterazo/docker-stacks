@@ -20,12 +20,17 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - ./data/:/state/:rw
+      - ./entrypoint.sh:/usr/local/bin/vllm-entrypoint:ro
+      - /models/s
       # Fail instead of creating an empty directory on the VM root filesystem.
       - type: bind
         source: /models/safetensors
         target: /models/local
         bind:
           create_host_path: false
+    entrypoint:
+      - /bin/sh
+      - /usr/local/bin/vllm-entrypoint
     command:
       - serve
       - /models/${VLLM_MODEL_SOURCE:-local}/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a Hugging Face checkpoint}
@@ -44,22 +49,15 @@ services:
       - --max-num-seqs
       - "5"
       - --enable-prefix-caching
-      # Use the QAT assistant head matched to the 31B target.
-      - --speculative-config
-      - >-
-        {"method":"mtp", "model":"/models/local/google/gemma-4-31B-it-qat-q4_0-unquantized-assistant", "num_speculative_tokens":3, "draft_tensor_parallel_size":2}
       - --gpu-memory-utilization
       - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
       - --kv-cache-dtype
       - float16
-      # Conservative PCIe fallback until GPU P2P is tested.
       - --disable-custom-all-reduce
       - --default-chat-template-kwargs
       - '{"enable_thinking":true}'
-      # The chat template starts thinking in the prompt; split generated reasoning.
       - --reasoning-parser
       - gemma4
-      # Match Gemma's native tool-call format rather than Qwen XML.
       - --enable-auto-tool-choice
       - --tool-call-parser
       - ${VLLM_TOOL_CALL_PARSER:-gemma4}
