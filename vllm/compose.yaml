@@ -21,12 +21,7 @@ services:
     volumes:
       - ./data/:/state/:rw
       - ./entrypoint.sh:/usr/local/bin/vllm-entrypoint:ro
-      # Fail instead of creating an empty directory on the VM root filesystem.
-      - type: bind
-        source: /models/safetensors
-        target: /models/local
-        bind:
-          create_host_path: false
+      - /models/safetensors/:/models/local/:rw
     entrypoint:
       - /bin/sh
       - /usr/local/bin/vllm-entrypoint
