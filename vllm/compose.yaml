@@ -9,13 +9,39 @@ services:
     restart: unless-stopped
     init: true
     environment:
+      # entrypoint
       VLLM_API_KEY_NAMES: ${VLLM_API_KEY_NAMES:?Set VLLM_API_KEY_NAMES in .env}
+      # runtime identity & cache paths
+      HOME: /state
+      # UID 1000 has no passwd entry in the image; PyTorch needs a username.
+      USER: vllm
+      XDG_CACHE_HOME: /state/cache
+      HF_HOME: /state/huggingface
+      HF_HUB_OFFLINE: 1
+      VLLM_CACHE_ROOT: /state/vllm
+      TORCHINDUCTOR_CACHE_DIR: /state/torch
+      TRITON_CACHE_DIR: /state/triton
+      # rdna2 runtime compatibility
+      VLLM_ROCM_USE_AITER: 0
+      VLLM_ROCM_USE_AITER_MOE: 0
+      VLLM_GDN_HIP_PREFILL: 1
+      VLLM_DISABLED_KERNELS: ExllamaLinearKernel
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      VLLM_USE_RDNA2_FA: 1
+      VLLM_RDNA_FORCE_FP16: 1
+      VLLM_RDNA_AR: 0
+      VLLM_USE_V2_MODEL_RUNNER: 1
+      GPU_MAX_HW_QUEUES: 2
+      TORCH_BLAS_PREFER_HIPBLASLT: 0
+      PYTORCH_TUNABLEOP_ENABLED: 0
+      PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED: 0
+      NCCL_P2P_DISABLE: 1
     env_file:
       - .env
       - .secrets
     shm_size: 4gb
     ports:
-      - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${VLLM_PORT:-8000}:8000/tcp
+      - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:8000:8000/tcp
     # Match tensor parallelism to the attached and validated V620 count.
     devices:
       - /dev/kfd:/dev/kfd
@@ -29,7 +55,7 @@ services:
       - /usr/local/bin/vllm-entrypoint
     command:
       - serve
-      - /models/${VLLM_MODEL_SOURCE:-local}/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a Hugging Face checkpoint}
+      - /models/local/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a Hugging Face checkpoint}
       - --served-model-name
       - ${VLLM_SERVED_MODEL_NAME:-vllm}
       - --host
@@ -44,6 +70,8 @@ services:
       - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
       - --max-model-len
       - ${CONTEXT_SIZE:-262144}
+      - --speculative-config
+      - '{"method":"mtp","num_speculative_tokens":1}'
       - --max-num-seqs
       - "5"
       - --enable-prefix-caching
@@ -60,10 +88,10 @@ services:
       - --default-chat-template-kwargs
       - '{"enable_thinking":true}'
       - --reasoning-parser
-      - ${VLLM_REASONING_PARSER:-qwen3}
+      - qwen3
       - --enable-auto-tool-choice
       - --tool-call-parser
-      - ${VLLM_TOOL_CALL_PARSER:-gemma4}
+      - qwen3_coder
     healthcheck:
       test:
         - CMD

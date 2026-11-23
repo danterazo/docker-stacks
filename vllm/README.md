@@ -7,9 +7,9 @@ checkpoint over the OpenAI-compatible API on `192.168.30.150:8000` and
 service accepts. The local model library is mounted read-write; the NAS library
 is not mounted. `data/` contains writable caches.
 
-The configured model and its path are in `.env`. The default is
-`google/gemma-4-E4B-it-qat-w4a16-ct`, served as `gemma-4-e4b-qat` with
-131,072 tokens over two GPUs.
+The configured model and its path are in `.env`. The current model is
+`Qwen/Qwen3.5-35B-A3B-GPTQ-Int4`, served as `qwen3.5-35b-a3b` with
+262,144 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
 DeepSeek-R1-Distill-Qwen-1.5B FP16 smoke-test checkpoint is now under
@@ -58,10 +58,10 @@ curl https://vllm.samskeyti.net/v1/models \
 curl https://vllm.samskeyti.net/v1/chat/completions \
   -H "Authorization: Bearer $VLLM_API_KEY" \
   -H 'Content-Type: application/json' \
-  -N -d '{"model":"gemma-4-e4b-qat","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
+  -N -d '{"model":"qwen3.5-35b-a3b","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
-The current configuration requests two GPUs, 131072 tokens, up to five
+The current configuration requests two GPUs, 262144 tokens, up to five
 concurrent sequences and a 0.80 per-GPU memory utilization target. This target is not a
 hard VRAM limit or a GPU reservation; competing inference processes can still
 cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
@@ -70,8 +70,10 @@ disabled between the two cards. Loading a model can use swap on this VM;
 loading the GPTQ model from NFS previously took several minutes. The older
 Qwen3-32B-AWQ checkpoint was
 removed after its GPTQ alternative was downloaded. Change
-`VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and any necessary
-runtime settings in `.env`, then recreate with `docker compose up -d`.
+`VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and the capacity settings in `.env`,
+then recreate with `docker compose up -d`. Stable image, cache, and RDNA2
+settings are grouped in `compose.yaml`; architecture-specific CLI flags are
+defined beside the rest of the startup command.
 
 ## Kveikur LXC Model Storage
 
@@ -94,20 +96,20 @@ file metadata and sizes, not full content hashes, and refuses to overwrite an
 incomplete or mismatched checkpoint. The local ZFS-backed model directory is
 shared from the Proxmox host; do not copy it into the LXC root filesystem.
 
-Automatic tool choice is enabled with the `gemma4` parser, matching the
-current checkpoint's XML tool-call template. When changing models, set
-`VLLM_TOOL_CALL_PARSER` in `.env` to a parser compatible with the new model's
-chat template before recreating the service. These are server settings and
-apply to all clients; OpenCode's `--auto` controls permission approval instead.
+Automatic tool choice is enabled with the `qwen3_coder` parser, matching the
+current checkpoint's XML tool-call template. When changing model families,
+update the parser flags in `compose.yaml` to match the new chat template before
+recreating the service. These are server settings and apply to all clients;
+OpenCode's `--auto` controls permission approval instead.
 
-The Compose command also enables `--reasoning-parser gemma4`. The checkpoint's
+The Compose command also enables `--reasoning-parser qwen3`. The checkpoint's
 chat template puts `<think>` in the prompt, so without the reasoning parser
 the generated reasoning and `</think>` appear in normal assistant content.
 After recreating the service, verify a streamed `/v1/chat/completions` response
 contains reasoning in a separate `reasoning` or `reasoning_content` delta and
 the answer in `content`. This has not yet been verified on this deployment.
-For a different model, select a reasoning parser compatible with its template
-instead of assuming the Qwen parser applies.
+For a different model family, select a reasoning parser compatible with its
+template instead of assuming the Qwen parser applies.
 
 OpenCode's vLLM discovery cannot infer tool support. Even with the server's
 tool parser enabled, check the selected model's OpenCode capabilities and
@@ -115,3 +117,22 @@ explicitly enable tools there if needed. Validate actual tool calls before
 relying on them. The power-cap benchmark uses `/v1/completions`, not chat
 completions; do not compare runs across server configuration changes without
 recording the difference.
+
+## Qwen3.5 MTP benchmark (2026-11-23)
+
+The Qwen3.5 checkpoint ships one MTP layer, and vLLM 0.31.0+rdna supports it
+with `{"method":"mtp","num_speculative_tokens":1}`. An otherwise identical
+single-request benchmark used a fixed 512-input/256-output random workload,
+`temperature=0`, three warmups, eight measured requests and thinking disabled.
+
+| Draft tokens | Output tok/s | Median TPOT | Acceptance | Result                                                        |
+| -----------: | -----------: | ----------: | ---------: | ------------------------------------------------------------- |
+|            0 |        53.25 |    17.91 ms |          - | Baseline                                                      |
+|            1 |        70.84 |    12.27 ms |     74.44% | Enabled                                                       |
+|            2 |        46.85 |    16.98 ms |     65.09% | Rejected                                                      |
+|            3 |            - |           - |          - | Rejected; RDNA draft-decode path raises `NotImplementedError` |
+
+MTP=1 improved output throughput by 33.0% and reduced median TPOT by 31.5%.
+It uses about 24.5 GiB per V620 at the current 80% memory target and reduces
+available KV cache from 12.22 GiB to 10.87 GiB per GPU. Keep the one-token
+setting; higher values do not improve this workload and MTP=3 cannot initialize.
