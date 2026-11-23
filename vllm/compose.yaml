@@ -1,7 +1,7 @@
 services:
   vllm:
     image: blivioniag/vllm-rdna:v0.31.0-extras
-    container_name: radeon-vllm
+    container_name: vllm
     user: 1000:1000
     group_add:
       - ${VIDEO_GID:-44}
@@ -30,7 +30,7 @@ services:
       - serve
       - /models/${VLLM_MODEL_SOURCE:-local}/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a Hugging Face checkpoint}
       - --served-model-name
-      - ${VLLM_SERVED_MODEL_NAME:-radeon-vllm}
+      - ${VLLM_SERVED_MODEL_NAME:-vllm}
       - --host
       - 0.0.0.0
       - --port
