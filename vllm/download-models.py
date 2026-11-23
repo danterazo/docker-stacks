@@ -20,7 +20,7 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 
 DISK = Path(os.environ.get('VLLM_MODEL_DISK', '/models'))
-IMAGE = 'blivioniag/vllm-rdna:v0.31.0-extras'
+IMAGE = 'ghcr.io/opengfx1030/vllm-rdna:v0.34.0-1-rocm7.14.0'
 REPO_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$')
 REV_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]*$')
 

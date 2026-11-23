@@ -1,6 +1,6 @@
 services:
   vllm:
-    image: blivioniag/vllm-rdna:v0.31.0-extras
+    image: ghcr.io/opengfx1030/vllm-rdna:v0.34.0-1-rocm7.14.0
     container_name: radeon-vllm
     user: 1000:1000
     group_add:

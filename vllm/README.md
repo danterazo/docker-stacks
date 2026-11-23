@@ -4,8 +4,10 @@ The Compose service is configured to serve a local Hugging Face safetensors
 checkpoint over the OpenAI-compatible API on `192.168.30.150:8000` and
 `https://vllm.samskeyti.net`. The endpoint requires a bearer token from
 `.secrets`; `VLLM_API_KEY_NAMES` in `.env` selects which client variables the
-service accepts. The local model library is mounted read-write; the NAS library
-is not mounted. `data/` contains writable caches.
+service accepts. The service pins
+`ghcr.io/opengfx1030/vllm-rdna:v0.34.0-1-rocm7.14.0`, rather than the moving
+nightly tag. The local model library is mounted read-write; the NAS library is
+not mounted. `data/` contains writable caches.
 
 The configured model and its path are in `.env`. The current model is
 `Qwen/Qwen3.5-35B-A3B-GPTQ-Int4`, served as `qwen3.5-35b-a3b` with
