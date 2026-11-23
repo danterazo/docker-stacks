@@ -55,6 +55,7 @@ services:
       - float16
       - --limit-mm-per-prompt
       - '{"image":2,"video":0}'
+      - --skip-mm-profiling
       - --disable-custom-all-reduce
       - --default-chat-template-kwargs
       - '{"enable_thinking":true}'
