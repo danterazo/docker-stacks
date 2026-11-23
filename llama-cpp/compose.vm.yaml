@@ -6,7 +6,7 @@ services:
       args:
         BUILD_JOBS: ${BUILD_JOBS:-1}
     container_name: radeon-llama-cpp
-    user: "${LLAMA_UID:-1000}:${LLAMA_GID:-1000}"
+    user: "1000:1000"
     group_add:
       - "${VIDEO_GID:-44}"
       - "${RENDER_GID:-991}"
@@ -23,7 +23,7 @@ services:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
     ports:
-      - "${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:${LLAMA_PORT:-8080}:8080/tcp"
+      - "${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:8080:8080/tcp"
     volumes:
       - type: bind
         source: /models/llama-cpp

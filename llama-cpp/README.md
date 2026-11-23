@@ -4,7 +4,7 @@ This is an **alternative**, not a companion, to vLLM: don't build or start it wh
 
 It uses [edwinbrowwn/llama.cpp-rdna2](https://github.com/edwinbrowwn/llama.cpp-rdna2) at `e194cbddce45178467cef4afab0e3400ea357406`, on the locally present `blivioniag/vllm-rdna:v0.31.0-extras` ROCm 7.14 image pinned by digest. It builds HIP for `gfx1030` with RCCL required; speculative sidecars and the web UI are not built. GitHub must be reachable for the source fetch. Reproducibility also depends on the pinned base image remaining available; overrides to build arguments change the build.
 
-The configured Qwen3.5-35B-A3B Q4_K_M GGUF is copied into the host library `/rpool/data/models/gguf/lmstudio-community/Qwen3.5-35B-A3B-GGUF/` and mapped into the LXC at `/models/gguf`. Compose exposes that library inside the inference container as `/models/local`; `.env` selects `LLAMA_MODEL_SOURCE=local` and uses a path relative to that library. The NAS original remains untouched. The file must be readable by the configured UID. The ~21 GB model, context, build cache and memory-mapped pages can pressure the LXC memory, host RAM and available pool space. One build job is the default, not a guarantee of success. Check available RAM, swap and root space first; stop if resources are inadequate. The build can take significant time and disk. No disk cleanup is performed by these instructions.
+The configured Qwen3.5-35B-A3B Q4_K_M GGUF is copied into the host library `/rpool/data/models/gguf/lmstudio-community/Qwen3.5-35B-A3B-GGUF/` and mapped into the LXC at `/models/gguf`. Compose exposes that library inside the inference container as `/models/local`; `.env` supplies a `LLAMA_MODEL` path relative to that library. The NAS original remains untouched. The file must be readable by UID/GID 1000. The ~21 GB model, context, build cache and memory-mapped pages can pressure the LXC memory, host RAM and available pool space. One build job is the default, not a guarantee of success. Check available RAM, swap and root space first; stop if resources are inadequate. The build can take significant time and disk. No disk cleanup is performed by these instructions.
 
 ## First trial (only after the vLLM benchmark is finished)
 
@@ -16,6 +16,7 @@ The configured Qwen3.5-35B-A3B Q4_K_M GGUF is copied into the host library `/rpo
    ```
 
    Check the LAN IP (`ip -br -4 addr`), UID/GID (`id`) and device groups (`ls -ln /dev/kfd /dev/dri`). Update `.env` if needed. The current two-card default is `LLAMA_TENSOR_SPLIT=1,1`; for four V620s, use `1,1,1,1` after independently validating the new hardware/topology. All visible HIP GPUs are available to the server; verify the startup logs show the expected devices and split. Adjust `LLAMA_CONTEXT_SIZE` only after observing memory usage.
+
 3. Validate, build, and start explicitly:
 
    ```sh
@@ -34,7 +35,8 @@ The configured Qwen3.5-35B-A3B Q4_K_M GGUF is copied into the host library `/rpo
      -d '{"messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":32}'
    ```
 
-   Replace the address and port with the values in `.env`. Health returns 503 while loading and 200 when ready; Docker's 15-minute start period is not a startup deadline. Inspect logs and GPU memory if unhealthy. The LAN endpoint has **no authentication**: restrict access using the network/firewall, and do not expose it to untrusted networks. Only a text GGUF is configured, not a vision projector.
+   Replace the address with `INFERENCE_BIND_ADDRESS` from `.env`; port 8080 is fixed in `compose.yaml`. Health returns 503 while loading and 200 when ready; Docker's 15-minute start period is not a startup deadline. Inspect logs and GPU memory if unhealthy. The LAN endpoint has **no authentication**: restrict access using the network/firewall, and do not expose it to untrusted networks. Only a text GGUF is configured, not a vision projector.
+
 5. After testing, stop it and verify GPU memory is released before returning to vLLM:
 
    ```sh
