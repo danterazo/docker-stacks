@@ -55,8 +55,6 @@ services:
       - float16
       # Conservative PCIe fallback until GPU P2P is tested.
       - --disable-custom-all-reduce
-      - --language-model-only
-      - --skip-mm-profiling
       - --default-chat-template-kwargs
       - '{"enable_thinking":true}'
       # The chat template starts thinking in the prompt; split generated reasoning.
