@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-11-22"
-  timestamp: "9:13:57 AM"
+  date: "2026-11-23"
+  timestamp: "3:59:14 AM"
 
 cluster:
   entrypoint:
@@ -41,13 +41,6 @@ docker_guests:
     pool: prod
     type: lxc
     tags: [docker]
-  105:
-    hostname: radeon-vm
-    node: kveikur
-    address: 192.168.30.105
-    pool: ""
-    type: qemu
-    tags: [deprecated, docker, gpu]
   107:
     hostname: calibre
     node: kex
