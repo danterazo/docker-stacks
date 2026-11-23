@@ -10,7 +10,7 @@ nightly tag. The local model library is mounted read-write; the NAS library is
 not mounted. `data/` contains writable caches.
 
 The configured model and its path are in `.env`. The current model is
-`Qwen/Qwen3.5-35B-A3B-GPTQ-Int4`, served as `qwen3.5-35b-a3b` with
+`palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4`, served as `qwen3.6-35b-a3b` with
 262,144 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
@@ -60,7 +60,7 @@ curl https://vllm.samskeyti.net/v1/models \
 curl https://vllm.samskeyti.net/v1/chat/completions \
   -H "Authorization: Bearer $VLLM_API_KEY" \
   -H 'Content-Type: application/json' \
-  -N -d '{"model":"qwen3.5-35b-a3b","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
+  -N -d '{"model":"qwen3.6-35b-a3b","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
 The current configuration requests two GPUs, 262144 tokens, up to five
