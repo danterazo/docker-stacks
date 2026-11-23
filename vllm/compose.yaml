@@ -39,7 +39,7 @@ services:
       - --tensor-parallel-size
       - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
       - --max-model-len
-      - ${CONTEXT_SIZE:-8192}
+      - ${CONTEXT_SIZE:-131072}
       - --max-num-seqs
       - "5"
       - --enable-prefix-caching
