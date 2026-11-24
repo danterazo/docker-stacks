@@ -1,8 +1,8 @@
 schema_version: 1
 
 last_updated:
-  date: "2026-11-23"
-  timestamp: "3:59:14 AM"
+  date: "2026-11-24"
+  timestamp: "7:50:06 AM"
 
 cluster:
   entrypoint:
@@ -125,6 +125,13 @@ docker_guests:
     pool: dev
     type: lxc
     tags: [docker]
+  124:
+    hostname: homeassistant
+    node: cerulean
+    address: 192.168.30.124
+    pool: prod
+    type: lxc
+    tags: [docker, homeautomation]
   130:
     hostname: hermes
     node: cerulean
