@@ -1,9 +1,7 @@
-name: home-assistant
-
 services:
-  homeassistant:
+  home-assistant:
     image: ghcr.io/home-assistant/home-assistant:stable
-    container_name: homeassistant
+    container_name: home-assistant
     network_mode: host
     restart: unless-stopped
     stop_grace_period: 60s
