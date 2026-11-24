@@ -1,0 +1,22 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    network_mode: host
+    restart: unless-stopped
+    stop_grace_period: 60s
+    env_file: .env
+    volumes:
+      - ./data/homeassistant/:/config/:rw
+
+  matter-server:
+    image: ghcr.io/matter-js/matterjs-server:stable
+    container_name: matter-server
+    network_mode: host
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      LISTEN_ADDRESS: 127.0.0.1
+      PRIMARY_INTERFACE: eth0
+    volumes:
+      - ./data/matter/:/data/:rw
