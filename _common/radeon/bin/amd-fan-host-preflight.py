@@ -19,8 +19,10 @@ def main(*, timeout: float = 60) -> int:
 	while True:
 		try:
 			gpus = controller.read_gpus(root=Path('/sys/class/hwmon'), allow_empty=False)
-			if len(gpus) != controller.EXPECTED_GPUS:
-				raise controller.SensorError(f'Expected {controller.EXPECTED_GPUS} V620 GPUs, found {len(gpus)}')
+			selected = controller.selected_pci_ids()
+			expected = len(selected) if selected is not None else controller.EXPECTED_GPUS
+			if len(gpus) != expected:
+				raise controller.SensorError(f'Expected {expected} V620 GPUs, found {len(gpus)}')
 		except (OSError, controller.SensorError) as exc:
 			if time.monotonic() >= deadline:
 				print(f'Host GPU fan control preflight failed: {exc}', file=sys.stderr)
