@@ -29,6 +29,17 @@ docker compose pull
 docker compose up -d
 ```
 
+Home Assistant 2026.8 and newer manages HTTP settings under
+**Settings > System > Network**. Do not add an `http:` block to
+`configuration.yaml`; doing so imports deprecated YAML settings and raises a
+repair. Set the following values in the Network UI before relying on the
+Caddy hostname:
+
+- server host: `192.168.30.124`;
+- trust X-Forwarded-For: enabled;
+- trusted proxies: `192.168.30.203/32`, `192.168.30.204/32` and
+  `192.168.30.205/32`.
+
 Do not overwrite an existing configuration. The Matter image writes as
 `dante:dante (1000:1000)`; create its data directory as that identity.
 Home Assistant uses its image's default user. Back up the entire ignored
@@ -61,6 +72,12 @@ Update older plugs before removing Kasa; the Matter fabric should then
 provide both control and metering.
 
 ## Energy tracking
+
+As of 2026-11-24, the live Energy dashboard tracks all eight commissioned
+KP125M plugs: `Desk Lamp`, `Lights`, `Kex`, `Kveikur`, `Óveður`,
+`NerdQAxe++`, `Varðeldur` and `Xfinity XB10`. Each uses its cumulative
+Matter energy sensor plus its live power sensor. The `Left Lamp` and
+`Right Lamp` Matter bulbs are control-only and are not energy sources.
 
 After pairing, open each KP125M device in Home Assistant and confirm it has:
 
@@ -141,10 +158,12 @@ permission enabled. Follow the platform's same-network requirements;
 joining `SSK-IoT` alone does not put the LAN-hosted controller on that segment.
 Wi-Fi Matter bulbs do not require a Thread border router.
 
-The Home Assistant UI is reverse-proxied as `https://home.samskeyti.net` by
-all running Caddy nodes. Direct LAN access remains available at
-`http://192.168.30.124:8123`. Caddy source addresses are explicitly trusted
-for forwarded client addresses. Matter's
+The Home Assistant UI is reverse-proxied as `https://home.samskeyti.net`.
+The route is committed for every Caddy node; Caddy 203 and 204 are currently
+verified, while 205 is tracked for catch-up when Kveikur SSH access returns.
+Direct LAN access remains available at `http://192.168.30.124:8123`.
+Caddy source addresses are explicitly trusted for forwarded client addresses.
+Matter's
 unauthenticated management API listens only on guest loopback and is reachable
 by Home Assistant because both containers use host networking. No WAN
 forwarding or Tailscale sidecar is configured.
