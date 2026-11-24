@@ -64,6 +64,8 @@ services:
       - "8000"
       - --dtype
       - float16
+      - --quantization
+      - gptq
       - --tensor-parallel-size
       - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
       - --max-model-len

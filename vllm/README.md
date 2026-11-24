@@ -9,9 +9,9 @@ service accepts. The service pins
 nightly tag. The local model library is mounted read-write; the NAS library is
 not mounted. `data/` contains writable caches.
 
-The configured model and its path are in `.env`. The current model is the
-official BF16 `Qwen/Qwen3.6-35B-A3B`, served as `qwen3.6-35b-a3b` with
-262,144 tokens over four GPUs.
+The configured model and its path are in `.env`. The current model is
+`palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4`, served as `qwen3.6-35b-a3b` with
+262,144 tokens over two GPUs.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
 DeepSeek-R1-Distill-Qwen-1.5B FP16 smoke-test checkpoint is now under
@@ -63,7 +63,7 @@ curl https://vllm.samskeyti.net/v1/chat/completions \
   -N -d '{"model":"qwen3.6-35b-a3b","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
-The current configuration requests four GPUs, 262144 tokens, up to five
+The current configuration requests two GPUs, 262144 tokens, up to five
 concurrent sequences and a 0.80 per-GPU memory utilization target. This target is not a
 hard VRAM limit or a GPU reservation; competing inference processes can still
 cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
