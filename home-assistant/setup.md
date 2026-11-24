@@ -120,6 +120,39 @@ Official starting points:
 - [Xcel customer data access](https://mn.my.xcelenergy.com/s/privacy/data-access)
 - [Home Assistant Opower support](https://www.home-assistant.io/integrations/opower/)
 
+## Model Context Protocol
+
+Home Assistant's **Model Context Protocol** integration is enabled for
+`https://home.samskeyti.net/api/mcp`. The main endpoint exposes all current and
+future Home Assistant AI tool sets, requires an administrator account and is
+not read-only. Home Assistant stores its OAuth grants per client; do not copy
+tokens between machines.
+
+The Home Assistant base URLs are:
+
+- external: `https://home.samskeyti.net`;
+- internal: `http://192.168.30.124:8123`.
+
+OpenCode is registered as `home-assistant` with the shared Linux/WSL
+configuration in `/configs/ai/opencode/opencode.json` and with the separate
+native Windows OpenCode configuration. Copilot uses the node-local
+`~/.copilot/mcp-config.json` on WSL2/Linux or
+`C:\Users\dante\.copilot\mcp-config.json` on Windows. VS Code discovers the
+Copilot-global registration.
+
+After copying or synchronizing a client configuration, authenticate each
+runtime separately:
+
+```bash
+opencode mcp auth home-assistant
+opencode mcp list
+```
+
+Complete the Home Assistant sign-in in a browser and approve only the actions
+you understand. A displayed registration is not a completed sign-in. A
+connected server can inspect and control Home Assistant because the main URL
+is not read-only.
+
 ## Initial device inventory
 
 Samskeyti's leases and Matter advertisements were checked on 2026-11-24.
