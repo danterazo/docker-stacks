@@ -2,7 +2,7 @@
 
 ## Deployment
 
-LXC 124 (`homeassistant`) runs on Cerulean at `192.168.30.124`, with
+LXC 124 (`home-assistant`) runs on Cerulean at `192.168.30.124`, with
 4 GiB RAM, a 32 GiB root filesystem and automatic startup. Its unprivileged
 Ubuntu/Docker baseline comes from LXC 100. The hostname-based bootstrap
 profile includes this stack automatically; no bootstrap change is required.
@@ -20,7 +20,7 @@ for sharing existing Matter-over-Wi-Fi devices through the iPhone app.
 For first installation only, as `dante`:
 
 ```bash
-cd /docker/homeassistant
+cd /docker/home-assistant
 mkdir -p data/homeassistant data/matter
 test ! -e data/homeassistant/configuration.yaml &&
   cp reference/configuration.yaml data/homeassistant/configuration.yaml
@@ -38,7 +38,7 @@ require sharing every device again.
 
 ## Onboarding and sharing a light
 
-1. Open `http://192.168.30.124:8123` and create the Home Assistant owner
+1. Open `https://home.samskeyti.net` and create the Home Assistant owner
    account yourself. Install the Home Assistant Companion app on your iPhone
    and connect it to that instance.
 2. In Home Assistant, add the **Matter** integration under
@@ -54,10 +54,54 @@ require sharing every device again.
    test one on/off operation and brightness/color if it is an actual bulb.
    Verify Apple Home still controls it before adding the remaining lights.
 
-Kasa can remain installed for energy tracking, and AiDot for firmware
-updates. Home Assistant joins its own Matter fabric without replacing
-Apple Home. Matter support for energy metrics depends on device firmware;
-do not assume every Kasa metric is exposed through Matter.
+Home Assistant joins its own Matter fabric without replacing Apple Home.
+TP-Link states that KP125M firmware 1.4.1 enables Matter 1.3 real-time power
+and historical energy data and that Home Assistant supports this capability.
+Update older plugs before removing Kasa; the Matter fabric should then
+provide both control and metering.
+
+## Energy tracking
+
+After pairing, open each KP125M device in Home Assistant and confirm it has:
+
+- a current-power sensor in watts;
+- a cumulative energy sensor in watt-hours or kilowatt-hours;
+- increasing energy values while the connected appliance uses power.
+
+Use the cumulative energy sensor in the Energy dashboard under
+**Settings > Dashboards > Energy**. Current power alone is not an Energy
+dashboard source. Add each measured plug as an individual device so its load
+can be identified separately. The equipment plugs at `.103` through `.107`
+are the useful metering targets; light plugs at `.100` through `.102` matter
+less unless their consumption is useful to track.
+
+Home Assistant cannot infer cumulative energy from a switch-only Matter
+endpoint. If a paired KP125M exposes no energy entity, confirm current firmware
+and compare its Matter diagnostic clusters before treating it as an
+integration fault. Control and metering do not require a Kasa cloud login.
+Kasa may still be needed for a firmware update on an older device.
+
+## Xcel Energy rates
+
+The Home Assistant **Opower** integration does not list Xcel Energy as a
+supported utility, so a direct Xcel account login is not currently supported.
+Do not enter Xcel credentials into a different utility entry. Xcel's Minnesota
+portal provides customer data access through Green Button or manual export,
+but that is not an automatic Home Assistant account integration.
+
+Electric cost must follow the actual Xcel plan and service territory. It can
+change by season and rate riders, and optional Time-of-Day or Time-of-Use
+plans have on- and off-peak periods. Confirm the plan and current tariff on
+the Xcel bill before assigning a Home Assistant price; a public average or
+web-page rate can materially misstate the cost. Once confirmed, configure
+the Energy dashboard with a fixed price for a flat plan or a scheduled
+dynamic-price entity for a time-varying plan.
+
+Official starting points:
+
+- [Xcel Minnesota rate books](https://www.xcelenergy.com/company/rates_and_regulations/rates/rate_books)
+- [Xcel customer data access](https://mn.my.xcelenergy.com/s/privacy/data-access)
+- [Home Assistant Opower support](https://www.home-assistant.io/integrations/opower/)
 
 ## Initial device inventory
 
@@ -97,17 +141,21 @@ permission enabled. Follow the platform's same-network requirements;
 joining `SSK-IoT` alone does not put the LAN-hosted controller on that segment.
 Wi-Fi Matter bulbs do not require a Thread border router.
 
-The Home Assistant UI listens only on the LXC's LAN IPv4 address. Matter's
+The Home Assistant UI is reverse-proxied as `https://home.samskeyti.net` by
+all running Caddy nodes. Direct LAN access remains available at
+`http://192.168.30.124:8123`. Caddy source addresses are explicitly trusted
+for forwarded client addresses. Matter's
 unauthenticated management API listens only on guest loopback and is reachable
 by Home Assistant because both containers use host networking. No WAN
-forwarding, Caddy route or Tailscale sidecar is configured.
+forwarding or Tailscale sidecar is configured.
 
 ## Checks
 
 ```bash
-cd /docker/homeassistant
+cd /docker/home-assistant
 docker compose ps
 curl --fail http://192.168.30.124:8123/
+curl --fail https://home.samskeyti.net/
 docker inspect --format '{{.State.Health.Status}}' matter-server
 ```
 
@@ -120,3 +168,4 @@ References:
 - [Home Assistant Container installation](https://www.home-assistant.io/installation/linux/)
 - [Home Assistant Matter integration and multi-admin sharing](https://www.home-assistant.io/integrations/matter/)
 - [Matter.js Docker configuration](https://github.com/matter-js/matterjs-server/blob/main/docs/docker.md)
+- [KP125M firmware and Matter energy support](https://www.tp-link.com/us/support/download/kp125m/)
