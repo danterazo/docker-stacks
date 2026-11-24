@@ -1,1 +1,39 @@
 default_config:
+
+template:
+  - sensor:
+      - name: Server Rack Total Power
+        unique_id: server_rack_total_power
+        state: >
+          {% set values = [
+            'sensor.server_rack_kex_power',
+            'sensor.server_rack_kveikur_power',
+            'sensor.server_rack_ovedur_power',
+            'sensor.server_rack_xfinity_xb10_power'
+          ]
+            | map('states')
+            | map('float', 0)
+            | list %}
+          {{ values | sum | round(3) }}
+        availability: >
+          {{ [
+            'sensor.server_rack_kex_power',
+            'sensor.server_rack_kveikur_power',
+            'sensor.server_rack_ovedur_power',
+            'sensor.server_rack_xfinity_xb10_power'
+          ]
+            | select('has_value')
+            | list
+            | count > 0 }}
+        attributes:
+          member_entities: >
+            {{ [
+              'sensor.server_rack_kex_power',
+              'sensor.server_rack_kveikur_power',
+              'sensor.server_rack_ovedur_power',
+              'sensor.server_rack_xfinity_xb10_power'
+            ] }}
+        device_class: power
+        state_class: measurement
+        unit_of_measurement: W
+        icon: mdi:server-network

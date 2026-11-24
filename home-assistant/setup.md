@@ -79,6 +79,19 @@ KP125M plugs: `Desk Lamp`, `Lights`, `Kex`, `Kveikur`, `Óveður`,
 Matter energy sensor plus its live power sensor. The `Left Lamp` and
 `Right Lamp` Matter bulbs are control-only and are not energy sources.
 
+## Server Rack dashboard
+
+The `Server Rack` sidebar dashboard plots the current and historical usage
+of the four rack plugs: Kex, Kveikur, Óveður and Xfinity XB10. It includes
+the total rack load, a 24-hour combined power chart and a seven-day cumulative
+energy chart. The aggregate sensor uses the explicit entity list so the XB10
+remains included even when it is assigned to a different Home Assistant area.
+
+The dashboard is stored in Home Assistant's UI-managed Lovelace storage.
+[`reference/lovelace.server-rack.json`](./reference/lovelace.server-rack.json)
+is the sanitized recreation source. Dashboard registrations and the aggregate
+template sensor are live in the running configuration.
+
 After pairing, open each KP125M device in Home Assistant and confirm it has:
 
 - a current-power sensor in watts;

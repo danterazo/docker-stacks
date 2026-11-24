@@ -1,0 +1,74 @@
+{
+	"version": 1,
+	"minor_version": 1,
+	"key": "lovelace.server-rack",
+	"data": {
+		"config": {
+			"title": "Server Rack",
+			"views": [
+				{
+					"title": "Usage",
+					"path": "usage",
+					"icon": "mdi:server",
+					"cards": [
+						{
+							"type": "entities",
+							"title": "Current power",
+							"show_header_toggle": false,
+							"entities": [
+								{
+									"entity": "sensor.server_rack_total_power",
+									"name": "Total rack power",
+									"icon": "mdi:server-network"
+								},
+								{
+									"entity": "sensor.server_rack_kex_power",
+									"name": "Kex",
+									"icon": "mdi:server"
+								},
+								{
+									"entity": "sensor.server_rack_kveikur_power",
+									"name": "Kveikur",
+									"icon": "mdi:server"
+								},
+								{
+									"entity": "sensor.server_rack_ovedur_power",
+									"name": "Óveður",
+									"icon": "mdi:server"
+								},
+								{
+									"entity": "sensor.server_rack_xfinity_xb10_power",
+									"name": "Xfinity XB10",
+									"icon": "mdi:router-wireless"
+								}
+							]
+						},
+						{
+							"type": "history-graph",
+							"title": "Power over 24 hours",
+							"hours_to_show": 24,
+							"entities": [
+								"sensor.server_rack_total_power",
+								"sensor.server_rack_kex_power",
+								"sensor.server_rack_kveikur_power",
+								"sensor.server_rack_ovedur_power",
+								"sensor.server_rack_xfinity_xb10_power"
+							]
+						},
+						{
+							"type": "history-graph",
+							"title": "Energy over 7 days",
+							"hours_to_show": 168,
+							"entities": [
+								"sensor.server_rack_kex_energy",
+								"sensor.server_rack_kveikur_energy",
+								"sensor.server_rack_ovedur_energy",
+								"sensor.server_rack_xfinity_xb10_energy"
+							]
+						}
+					]
+				}
+			]
+		}
+	}
+}
