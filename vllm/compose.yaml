@@ -36,6 +36,7 @@ services:
       PYTORCH_TUNABLEOP_ENABLED: 0
       PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED: 0
       NCCL_P2P_DISABLE: 1
+      ROCR_VISIBLE_DEVICES: b4b8b0983712cb7e,7323cacd39ece85a
     env_file:
       - .env
       - .secrets

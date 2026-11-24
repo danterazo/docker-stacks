@@ -66,6 +66,12 @@ class FanTests(unittest.TestCase):
 		with self.assertRaises(amdfan.SensorError):
 			amdfan.read_gpus(root=self.hwmon)
 
+	def test_reads_only_selected_gpu_ids(self):
+		(self.hwmon / 'hwmon1' / 'temp2_input').unlink()
+		with mock.patch.dict(os.environ, {'AMD_FAN_PCI_IDS': '0000:01:00.0'}):
+			gpus = amdfan.read_gpus(root=self.hwmon)
+		self.assertEqual([gpu['pci'] for gpu in gpus], ['0000:01:00.0'])
+
 	def test_unbound_v620s_default_to_quiet_duty(self):
 		empty = self.root / 'empty-hwmon'
 		empty.mkdir()

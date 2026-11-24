@@ -220,6 +220,7 @@ def select_profile(*, path: Path, name: str) -> None:
 
 
 def read_gpus(*, root: Path, allow_empty: bool = False) -> List[dict]:
+	selected_pci = selected_pci_ids()
 	devices: Dict[str, dict] = {}
 	try:
 		entries = sorted(path for path in root.iterdir() if path.name.startswith('hwmon'))
@@ -231,6 +232,8 @@ def read_gpus(*, root: Path, allow_empty: bool = False) -> List[dict]:
 				if (device / 'vendor').read_text().strip() != GPU_VENDOR or (device / 'device').read_text().strip() != GPU_DEVICE:
 					continue
 				pci_id = device.resolve(strict=True).name
+				if selected_pci is not None and pci_id not in selected_pci:
+					continue
 				if pci_id in devices:
 					raise SensorError('duplicate GPU hwmon device')
 				temps: Dict[str, float] = {}
@@ -252,9 +255,20 @@ def read_gpus(*, root: Path, allow_empty: bool = False) -> List[dict]:
 				raise SensorError(f'cannot read GPU sensor {path.name}: {exc}') from exc
 	except OSError as exc:
 		raise SensorError(f'cannot enumerate hwmon: {exc}') from exc
-	if len(devices) != EXPECTED_GPUS and not (allow_empty and not devices):
-		raise SensorError(f'expected {EXPECTED_GPUS} V620 GPUs, found {len(devices)}')
+	expected_gpus = len(selected_pci) if selected_pci is not None else EXPECTED_GPUS
+	if len(devices) != expected_gpus and not (allow_empty and not devices):
+		raise SensorError(f'expected {expected_gpus} V620 GPUs, found {len(devices)}')
 	return [devices[key] for key in sorted(devices)]
+
+
+def selected_pci_ids() -> Optional[set[str]]:
+	value = os.environ.get('AMD_FAN_PCI_IDS', '').strip()
+	if not value:
+		return None
+	identifiers = {identifier.strip() for identifier in value.split(',') if identifier.strip()}
+	if not identifiers:
+		raise SensorError('AMD_FAN_PCI_IDS contains no valid PCI identifiers')
+	return identifiers
 
 
 def read_temperatures(*, root: Path, pci_root: Path) -> List[dict]:
