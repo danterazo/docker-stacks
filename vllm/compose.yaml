@@ -36,7 +36,6 @@ services:
       PYTORCH_TUNABLEOP_ENABLED: 0
       PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED: 0
       NCCL_P2P_DISABLE: 1
-      ROCR_VISIBLE_DEVICES: b4b8b0983712cb7e,7323cacd39ece85a
     env_file:
       - .env
       - .secrets
@@ -65,8 +64,6 @@ services:
       - "8000"
       - --dtype
       - float16
-      - --quantization
-      - gptq
       - --tensor-parallel-size
       - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
       - --max-model-len
