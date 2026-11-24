@@ -43,8 +43,11 @@ this skill, not a Make target.
 ## Preflight
 
 1. Run the mandatory refresh in `.github/skills/refresh-deployments/SKILL.md`,
-   including its separate metadata commit when there is drift. Stop if it
-   cannot complete.
+   including its separate metadata commit when there is complete drift.
+   If one PVE node is unavailable, preserve its existing map entries and skip
+   only its unverified targets. Continue deploying independent targets whose
+   owner and running state were rechecked live. Do not make a partial global
+   timestamp or partial-snapshot commit.
 2. Confirm the local checkout identity and branch. Check TickTick (Projects >
    Homelab) for unresolved blockers on selected guests; skip and report
    those, since `dupull` success does not clear them.
@@ -52,8 +55,10 @@ this skill, not a Make target.
    `git push`; if local `main` is only behind, target `origin/main`. Stop if
    they diverged or the branch is not `main`. Record the published SHA.
 4. Resolve selected guests, owners, state and role tags from the refresh.
-   Use only running Docker guests; report stopped ones as skipped. Recheck
-   owner and state immediately before operating on each guest.
+   Use only running Docker guests; report stopped or owner-unavailable guests
+   as skipped. An unavailable node does not block other selected targets.
+   Recheck each deployable guest's owner and state immediately before
+   operating.
 5. Reach LXCs through their owning node with `pct exec`; reach VMs through
    their trusted alias after confirming `ssh -G` resolves to `dante` and
    `id -un` matches. Run guest Git, Docker and helpers as `dante`, no `sudo`.
@@ -79,8 +84,11 @@ this skill, not a Make target.
 
 AdGuard Home and Caddy stay staggered even in lite mode:
 
-1. Classify roles from live tags. If roles are ambiguous or fewer than two
-   instances are running, skip that type and report why.
+1. Classify roles from live tags. If roles are ambiguous, stop that guest's
+   rollout and continue independently unambiguous targets. A downed instance
+   or owner is skipped, not a cluster-wide blocker. Fewer than two running
+   instances removes normal redundancy; report the expected interruption
+   and continue only when the user requested the affected rollout.
 2. Run one secondary of each type first, one guest at a time, after
    confirming in Proxmox that another instance of that type is running.
 3. Then the remaining secondaries, then primaries last, each only after the

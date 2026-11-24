@@ -26,14 +26,22 @@ here, not in the YAML.
   authorizes staging, deploying, restarting, bootstrap, starting stopped
   guests, installing packages, permission changes or scheduled checks (a
   weekly drift report needs separate approval).
-- If discovery is incomplete, ownership is ambiguous, access fails or
-  validation fails, stop before publishing or guest operations and report.
-  Never fall back to the old map or publish a partial snapshot. Track an
-  incomplete refresh in TickTick and do not claim the map is current.
+- If a PVE node is unavailable, complete discovery for reachable nodes and
+  continue selected deployments there. Preserve the old map entries for
+  unavailable nodes, skip only targets whose live owner or state cannot be
+  verified, and report every skip. Never start an unavailable node, infer
+  that an old owner is still current, or use an unverified target.
+- An unavailable node is not a cluster-wide deployment blocker. If ambiguity
+  or access failure affects a selected guest on a reachable node, stop that
+  guest's rollout without blocking independent verified targets. Track
+  incomplete or skipped work in TickTick and do not claim the global inventory
+  or skipped guests were refreshed.
 - If nothing changed, leave the file and both timestamps untouched, report no
-  drift, and skip the commit. Otherwise, for a deployment-triggered refresh,
-  commit only `deployments.yaml` in its own commit before publishing or guest
-  work. Use a concise description or
+  drift, and skip the commit. A complete deployment-triggered refresh may
+  update both global timestamps and be committed as a metadata-only commit.
+  During a partial refresh, leave the global timestamps unchanged and make
+  no partial-snapshot commit; directly requested, live-verified entry changes
+  may be committed separately. Use a concise description or
   `Persist cluster state as of YYYY-MM-DD @ h:mmam CDT` (`CST` when
   applicable; lowercase meridiem attached to the time).
 - Reuse the collected inventory for deployment preflight. Recheck volatile
@@ -136,7 +144,7 @@ here, not in the YAML.
     LXCs 150 (`vllm`) and 151 (`llama-cpp`) are Docker guests even when only
     tagged `gpu`; a matching stack and verified Docker installation establish
     their placement. Neither a checkout nor an absent GPU proves readiness.
-  - Caddy runs on LXCs 203 and 205 (Cerulean) and 204 (Kex) at last
+  - Caddy runs on LXCs 203 (Cerulean), 204 (Kex), and 205 (Kveikur) at last
     discovery; AdGuard Home on 200, 201 and 202. Disambiguate by ID and
     owner. Flag duplicate sets with no primary, several primaries or untagged
     members; never invent role tags.
