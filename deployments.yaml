@@ -126,7 +126,7 @@ docker_guests:
     type: lxc
     tags: [docker]
   124:
-    hostname: homeassistant
+    hostname: home-assistant
     node: cerulean
     address: 192.168.30.124
     pool: prod
