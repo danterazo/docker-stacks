@@ -143,6 +143,10 @@ pipe interactive commands or use pagers.
   continue with app-specific readiness checks and safe, in-scope remediation.
   Do not stop at reporting an error; stop only for a separate approval, a
   material choice or a blocker outside the approved scope.
+- For new LXCs, `pct start` can return before the systemd bus is ready.
+  Check guest readiness before service commands. An isolated clone can also
+  delay Docker behind network-online; keep isolation until inherited apps
+  are removed, then verify network-online again after activating its network.
 - Do not probe unrelated stacks or run mount, NFS or write-access checks unless
   the failure specifically points there.
 - On a nonzero exit or an explicit Git, package, image or Compose error, stop
