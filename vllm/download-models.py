@@ -4,7 +4,7 @@
 # Add model IDs here. Append @<commit> to pin a specific revision; without it,
 # the current main branch is used. Hugging Face model URLs are also accepted.
 MODELS = [
-	'Qwen/Qwen3.6-35B-A3B@345d467b117d1fd5eda9b879a5988de9ae5f47a7',
+	'palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4@00a66983516f8f8057741221277eed4141c9e431',
 	'btbtyler09/Qwen3.8-27B-GPTQ-4bit@b64f44dfedb71b73287219e0ec348b0a20c447e2',
 	'google/gemma-4-31B-it-qat-w4a16-ct@52f3f65bc7a02d555763bc923bd1d9094898219d',
 	'ibm-granite/granite-4.2-30b@9e668ce1c538387ef24d3644e9b0606647762636',
