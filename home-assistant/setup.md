@@ -166,6 +166,61 @@ you understand. A displayed registration is not a completed sign-in. A
 connected server can inspect and control Home Assistant because the main URL
 is not read-only.
 
+## Proxmox, EcoFlow and backup power
+
+### Proxmox VE
+
+Home Assistant connects to `cerulean.samskeyti.net:443` with the dedicated
+`homeassistant@pve` account and the `ha` API token. The token inherits only the
+`PVEAuditor` role on `/`; it cannot start, stop, restart, snapshot or update a
+guest or node. The integration discovers the reachable cluster nodes and their
+VMs, LXCs, storage and backup status every 60 seconds.
+
+Keep the token secret in Home Assistant's config entry only. Recreating or
+rotating it requires Proxmox API-token rotation and Home Assistant
+reconfiguration; do not put it in this repository, notes or a browser URL.
+
+### EcoFlow Cloud
+
+EcoFlow Cloud is installed but not configured because the account credentials
+or developer API keys must be entered directly in Home Assistant.
+
+For a plain **DELTA 3 Plus**, start with **App Login**:
+
+1. Add **EcoFlow Cloud** under **Settings > Devices & services**.
+2. Name the group `EcoFlow`.
+3. Choose **Use application API** / **App Login**.
+4. Use API host `api.ecoflow.com` and enter the EcoFlow app email/password in
+   the Home Assistant form.
+5. Select device type `DELTA_3` and confirm the displayed device name/serial.
+
+The installed integration has a separate public Developer API picker, but the
+Delta 3 Plus profile is in the application-API path. Do not select an
+incompatible public device type merely to use developer keys.
+
+### EcoFlow over USB with NUT
+
+NUT is intentionally not an Home Assistant service and is not configured as
+an Home Assistant NUT integration. It belongs on Cerulean, the physical USB
+host, so the UPS signal does not depend on the Wi-Fi/cloud path used for
+EcoFlow telemetry.
+
+The DELTA 3 Plus requires NUT 2.8.5 or newer. Cerulean's current Debian NUT
+package is only 2.8.1, so the official 2.8.5 source tarball is staged and
+SHA-256 verified under `/usr/local/src/network-upstools`.
+
+Before activation:
+
+1. Connect a USB data cable to the DELTA 3 Plus leftmost USB-C port and a USB
+   port on Cerulean.
+2. Verify `lsusb` shows EcoFlow USB HID ID `3746:ffff`.
+3. Install/build the 2.8.5 `usbhid-ups` driver and configure Cerulean as a
+   local NUT server with alias `ecoflow`.
+4. Validate `upsc ecoflow@127.0.0.1` before enabling any shutdown monitor.
+5. Add PVE `upsmon` clients only after a tested low-battery event and a
+   reviewed shutdown order. Do not automatically power off a PVE host merely
+   because a NUT service starts.
+
 ## Initial device inventory
 
 Samskeyti's leases and Matter advertisements were checked on 2026-11-24.
