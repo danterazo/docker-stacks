@@ -92,6 +92,29 @@ The dashboard is stored in Home Assistant's UI-managed Lovelace storage.
 is the sanitized recreation source. Dashboard registrations and the aggregate
 template sensor are live in the running configuration.
 
+## Adaptive Lighting
+
+Home Assistant Container supports Adaptive Lighting as a custom integration;
+it does not require Home Assistant OS or a separate VM. The integration is
+installed at version 1.32.0 and configured with two profiles in
+[`reference/configuration.yaml`](./reference/configuration.yaml):
+
+- **Living Room** controls `light.living_room_left_lamp` and
+  `light.living_room_right_lamp`;
+- **Hallway** controls `light.hallway_inner_light` and
+  `light.hallway_outer_light`.
+
+The profile entities are the individual bulbs, not the duplicate
+`light.living_room_lamps` or `light.hallway_lights` group helpers. Adaptive
+Lighting does not turn off or turn on lights as part of setup. Both profiles
+use 90-second adaptation intervals and 45-second transitions. Manual takeover
+is enabled, and explicit Home Assistant or external-controller turn-on
+commands retain their requested state instead of being overwritten immediately.
+
+Each profile creates a main switch plus sleep, adapt-color and adapt-brightness
+switches. The main switch enables ongoing adaptation for lights that are on;
+sleep mode is optional and off until explicitly enabled.
+
 After pairing, open each KP125M device in Home Assistant and confirm it has:
 
 - a current-power sensor in watts;

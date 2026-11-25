@@ -1,5 +1,27 @@
 default_config:
 
+adaptive_lighting:
+  - name: Living Room
+    lights:
+      - light.living_room_left_lamp
+      - light.living_room_right_lamp
+    interval: 90
+    transition: 45
+    take_over_control: true
+    adapt_only_on_bare_turn_on: true
+    manual_control_on_external_turn_on: true
+    detect_non_ha_changes: false
+  - name: Hallway
+    lights:
+      - light.hallway_inner_light
+      - light.hallway_outer_light
+    interval: 90
+    transition: 45
+    take_over_control: true
+    adapt_only_on_bare_turn_on: true
+    manual_control_on_external_turn_on: true
+    detect_non_ha_changes: false
+
 template:
   - sensor:
       - name: Server Rack Total Power
