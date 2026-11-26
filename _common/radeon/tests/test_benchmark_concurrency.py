@@ -39,8 +39,11 @@ class ConcurrencyTests(unittest.TestCase):
         inspect = json.dumps([{'Config': {'Cmd': ['serve', '/model', '--max-num-seqs', '1']},
                                'Image': 'test-image'}])
         metrics = {'num_requests_running': 0, 'num_requests_waiting': 0, 'prefix_cache_hits_total': 0}
+        secrets = self.root / '.secrets'
+        secrets.write_text('VLLM_API_KEY_KVEIKUR: ' + 'a' * 64 + '\n')
         args = ['benchmark-concurrency', '--output', str(self.root / 'results'),
-                '--caps', '180', '--clients', '1', '--rounds', '1']
+                '--caps', '180', '--clients', '1', '--rounds', '1',
+                '--api-key-file', str(secrets)]
         self.deployed = deployed
         with mock.patch.object(sys, 'argv', args), \
                 mock.patch.object(benchmark.powercaps, 'discover', return_value=self.cards), \

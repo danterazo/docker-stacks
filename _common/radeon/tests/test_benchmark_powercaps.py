@@ -45,10 +45,21 @@ class PowercapTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'readback'):
                 benchmark.set_caps(self.cards, [180000000, 180000000])
 
+    def test_load_api_key_requires_one_valid_key(self):
+        secrets = self.root / '.secrets'
+        secrets.write_text('VLLM_API_KEY_KVEIKUR: ' + 'a' * 64 + '\n')
+        self.assertEqual(benchmark.load_api_key(secrets), 'a' * 64)
+        secrets.write_text('VLLM_API_KEY_KVEIKUR: invalid\n')
+        with self.assertRaisesRegex(RuntimeError, 'VLLM_API_KEY_KVEIKUR'):
+            benchmark.load_api_key(secrets)
+
     def run_main(self, side_effect, extra=()):
         response = io.BytesIO(b'{"data":[{"id":"test-model"}]}')
+        secrets = self.root / '.secrets'
+        secrets.write_text('VLLM_API_KEY_KVEIKUR: ' + 'a' * 64 + '\n')
         args = ['benchmark-powercaps', '--output', str(self.root / 'results'),
-                '--caps', '250', '180', '--rounds', '1', *extra]
+                '--caps', '250', '180', '--rounds', '1',
+                '--api-key-file', str(secrets), *extra]
         with mock.patch.object(sys, 'argv', args), \
                 mock.patch.object(benchmark, 'discover', return_value=self.cards), \
                 mock.patch.object(benchmark, 'urlopen', return_value=response), \

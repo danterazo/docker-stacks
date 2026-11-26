@@ -7,8 +7,9 @@ drivers, fan profiles, or the boot service.
 ## Running
 
 Reserve an exclusive inference window and finish any fan-control changes first.
-The benchmark requires healthy `amd-fan` monitoring and write access to the
-detected V620s' `power1_cap` controls. On kveikur, `amd-cap` reports caps
+The benchmark requires healthy `amd-fan` monitoring, read access to the
+ignored `/docker/vllm/.secrets` API key, and write access to the detected
+V620s' `power1_cap` controls. On kveikur, `amd-cap` reports caps
 without writes; setting caps requires root. Permanent user ownership of sysfs
 controls is unnecessary.
 

@@ -13,7 +13,7 @@ import time
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
 def discover():
@@ -35,6 +35,17 @@ def discover():
 
 def read_int(path):
     return int(path.read_text().strip())
+
+
+def load_api_key(path, name='VLLM_API_KEY_KVEIKUR'):
+    values = []
+    for line in Path(path).read_text().splitlines():
+        key, separator, value = line.partition(':')
+        if separator and key.strip() == name:
+            values.append(value.strip())
+    if len(values) != 1 or not re.fullmatch(r'[0-9a-f]{64}', values[0]):
+        raise RuntimeError(f'Expected one 64-character hexadecimal {name} entry in {path}')
+    return values[0]
 
 
 def set_caps(cards, values):
@@ -80,7 +91,7 @@ def wait_ready(base, timeout):
 
 
 def request(base, model, cards, cap, repeats, output_tokens, cutoff, destination,
-            decode_cap=None, check_idle=True):
+            decode_cap=None, check_idle=True, api_key=None):
     before = metrics(base) if check_idle else None
     if before and (before['num_requests_running'] or before['num_requests_waiting']):
         raise RuntimeError('Server has another active/queued request; refusing to benchmark')
@@ -159,8 +170,10 @@ def request(base, model, cards, cap, repeats, output_tokens, cutoff, destination
     try:
         if errors:
             raise RuntimeError(errors[0])
-        connection.request('POST', '/v1/completions', body=body,
-                           headers={'Content-Type': 'application/json'})
+        headers = {'Content-Type': 'application/json'}
+        if api_key:
+            headers['Authorization'] = f'Bearer {api_key}'
+        connection.request('POST', '/v1/completions', body=body, headers=headers)
         response = connection.getresponse()
         if response.status != 200:
             raise RuntimeError(f'Inference HTTP {response.status}: {response.read()[:500]!r}')
@@ -244,7 +257,8 @@ def main():
     parser.add_argument('--prompt-repeats', type=int, default=160)
     parser.add_argument('--output-tokens', type=int, default=192)
     parser.add_argument('--cutoff-c', type=float, default=90)
-    parser.add_argument('--base-url', default='http://192.168.30.105:8000')
+    parser.add_argument('--base-url', default='http://192.168.30.150:8000')
+    parser.add_argument('--api-key-file', type=Path, default=Path('/docker/vllm/.secrets'))
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--decode-cap', type=int,
                         help='Switch both GPUs to this cap after the first output token')
@@ -262,10 +276,13 @@ def main():
             ):
                 parser.error(f'{cap} W outside supported/factory range')
     args.output.mkdir(parents=True, exist_ok=False)
+    api_key = load_api_key(args.api_key_file)
     if args.wait_ready:
         print('Waiting for idle server and healthy fan control', flush=True)
         wait_ready(args.base_url, args.wait_ready)
-    with urlopen(args.base_url + '/v1/models', timeout=10) as response:
+    model_request = Request(args.base_url + '/v1/models',
+                            headers={'Authorization': f'Bearer {api_key}'})
+    with urlopen(model_request, timeout=10) as response:
         model = json.load(response)['data'][0]['id']
     metadata = {
         'model': model, 'cards': [pci for pci, _ in cards], 'original_caps_uw': originals,
@@ -284,7 +301,7 @@ def main():
         if len(set(originals)) != 1:
             raise RuntimeError('Warm-up requires matching initial caps')
         request(args.base_url, model, cards, originals[0] // 1000000, 32, 64,
-                args.cutoff_c, args.output / 'warmup.json')
+                args.cutoff_c, args.output / 'warmup.json', api_key=api_key)
         for round_index in range(args.rounds):
             # Reverse the sweep in round 2 to expose temperature/time ordering bias.
             caps = args.caps if round_index % 2 == 0 else list(reversed(args.caps))
@@ -296,7 +313,7 @@ def main():
                 result = request(args.base_url, model, cards, cap, args.prompt_repeats,
                                  args.output_tokens, args.cutoff_c,
                                  args.output / f'round-{round_index + 1}-{cap}w.json',
-                                 decode_cap=args.decode_cap)
+                                 decode_cap=args.decode_cap, api_key=api_key)
                 result['round'] = round_index + 1
                 results.append(result)
                 (args.output / 'results.json').write_text(json.dumps(results, indent=2) + '\n')

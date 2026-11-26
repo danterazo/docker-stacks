@@ -11,7 +11,7 @@ import subprocess
 import threading
 import time
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
 MODULE = Path(__file__).with_name('benchmark-powercaps.py')
@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--prompt-repeats', type=int, default=160)
     parser.add_argument('--output-tokens', type=int, default=256)
     parser.add_argument('--base-url', default='http://192.168.30.150:8000')
+    parser.add_argument('--api-key-file', type=Path, default=Path('/docker/vllm/.secrets'))
     args = parser.parse_args()
     if args.rounds < 1 or any(c not in [1, 2, 4] for c in args.clients):
         parser.error('Use positive rounds and cohort sizes 1, 2, or 4')
@@ -51,6 +52,7 @@ def main():
                 250000000, powercaps.read_int(hwmon / 'power1_cap_max')):
                 parser.error(f'Unsupported cap {cap}')
     args.output.mkdir(parents=True, exist_ok=False)
+    api_key = powercaps.load_api_key(args.api_key_file)
     current = json.loads(command(['docker', 'inspect', 'vllm']))[0]
     original_command = current['Config']['Cmd']
     new_command = original_command.copy()
@@ -77,7 +79,9 @@ def main():
         deploy(benchmark_override)
         print('Waiting for reloaded model (four sequences)', flush=True)
         powercaps.wait_ready(args.base_url, 1200)
-        with urlopen(args.base_url + '/v1/models', timeout=10) as response:
+        model_request = Request(args.base_url + '/v1/models',
+                                headers={'Authorization': f'Bearer {api_key}'})
+        with urlopen(model_request, timeout=10) as response:
             model = json.load(response)['data'][0]['id']
         metadata['model'] = model
         (args.output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
@@ -89,7 +93,7 @@ def main():
         def warm(client):
             warm_barrier.wait(timeout=10)
             return powercaps.request(args.base_url, model, cards, warm_cap, 32, 64, 90,
-                args.output / f'warmup-{client}.json', check_idle=False)
+                args.output / f'warmup-{client}.json', check_idle=False, api_key=api_key)
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             list(pool.map(warm, range(4)))
         for round_index in range(args.rounds):
@@ -108,7 +112,7 @@ def main():
                         return powercaps.request(args.base_url, model, cards, cap,
                             args.prompt_repeats, args.output_tokens, 90,
                             args.output / f'r{round_index+1}-{cap}w-c{clients}-{client}.json',
-                            check_idle=False)
+                            check_idle=False, api_key=api_key)
                     print(f'Round {round_index+1}, {cap} W, {clients} clients', flush=True)
                     with concurrent.futures.ThreadPoolExecutor(max_workers=clients) as pool:
                         requests = list(pool.map(run, range(clients)))
