@@ -114,7 +114,7 @@ upgrade_ubuntu /etc/os-release /etc/update-manager/release-upgrades || exit 1
 : 'MULTI-TENANT HOSTS'
 declare -A HOST_APPS=(
 	["nvidia-vm"]='immich plex-video audiomuse'
-	["radeon-vm"]='vllm llama-cpp'
+	["radeon-vm"]='llama-cpp'
 	["paperless-ngx"]='paperless-ngx'
 )
 

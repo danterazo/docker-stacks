@@ -38,7 +38,7 @@ dpull() {
 
 		cd "$app_dir" || return 1
 		local -a compose_cmd=(docker compose)
-		if [[ ${HOSTNAME%%.*} == radeon-vm && ( ${app_dir%/} == "$root_dir/vllm" || ${app_dir%/} == "$root_dir/llama-cpp" ) ]]; then
+		if [[ ${HOSTNAME%%.*} == radeon-vm && ${app_dir%/} == "$root_dir/llama-cpp" ]]; then
 			# preserve the VM-specific settings and never start an inactive experiment
 			local project=${app_dir%/}
 			project=${project##*/}

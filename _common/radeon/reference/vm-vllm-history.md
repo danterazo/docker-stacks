@@ -1,8 +1,8 @@
 # Radeon vLLM
 
-> Historical VM notes. Run Compose from `/docker/vllm` with
-> `--env-file .env.vm.local -f compose.vm.yaml`; the split LXC uses a
-> different configuration. Do not start either stack without approval.
+> Historical VM notes. The VM-specific vLLM Compose file was retired after
+> the workload moved to LXC 150; commands below describe the removed
+> configuration and are not executable from the current checkout.
 
 The Compose service serves a local Hugging Face safetensors checkpoint over
 the OpenAI-compatible API on `192.168.30.105:8000`. The endpoint has no API

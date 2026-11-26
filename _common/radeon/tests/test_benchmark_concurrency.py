@@ -61,14 +61,14 @@ class ConcurrencyTests(unittest.TestCase):
         self.assertEqual(self.deployed[0][-1], '4')
         self.assertEqual(self.deployed[-1][-1], '1')
 
-    def test_deploy_uses_vm_compose_and_vm_environment(self):
+    def test_deploy_uses_kveikur_compose_and_environment(self):
         override = self.root / 'override.json'
         with mock.patch.object(benchmark, 'command', return_value='ok') as command, \
                 mock.patch('builtins.print'):
             benchmark.deploy(override)
         command.assert_called_once_with([
-            'docker', 'compose', '--env-file', '/docker/vllm/.env.vm.local',
-            '-f', '/docker/vllm/compose.vm.yaml', '-f', str(override),
+            'docker', 'compose', '--env-file', '/docker/vllm/.env',
+            '-f', '/docker/vllm/compose.yaml', '-f', str(override),
             'up', '-d', '--no-deps', '--pull', 'never', 'vllm',
         ])
 

@@ -18,8 +18,8 @@ MODULE = Path(__file__).with_name('benchmark-powercaps.py')
 spec = importlib.util.spec_from_file_location('powercaps', MODULE)
 powercaps = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(powercaps)
-COMPOSE = Path('/docker/vllm/compose.vm.yaml')
-ENV_FILE = Path('/docker/vllm/.env.vm.local')
+COMPOSE = Path('/docker/vllm/compose.yaml')
+ENV_FILE = Path('/docker/vllm/.env')
 
 
 def command(args):
@@ -39,7 +39,7 @@ def main():
     parser.add_argument('--rounds', type=int, default=2)
     parser.add_argument('--prompt-repeats', type=int, default=160)
     parser.add_argument('--output-tokens', type=int, default=256)
-    parser.add_argument('--base-url', default='http://192.168.30.105:8000')
+    parser.add_argument('--base-url', default='http://192.168.30.150:8000')
     args = parser.parse_args()
     if args.rounds < 1 or any(c not in [1, 2, 4] for c in args.clients):
         parser.error('Use positive rounds and cohort sizes 1, 2, or 4')
@@ -51,7 +51,7 @@ def main():
                 250000000, powercaps.read_int(hwmon / 'power1_cap_max')):
                 parser.error(f'Unsupported cap {cap}')
     args.output.mkdir(parents=True, exist_ok=False)
-    current = json.loads(command(['docker', 'inspect', 'radeon-vllm']))[0]
+    current = json.loads(command(['docker', 'inspect', 'vllm']))[0]
     original_command = current['Config']['Cmd']
     new_command = original_command.copy()
     index = new_command.index('--max-num-seqs') + 1

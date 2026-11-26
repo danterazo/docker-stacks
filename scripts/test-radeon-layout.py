@@ -40,7 +40,7 @@ dante_git() {
 
     def test_vm_profile_includes_split_stacks_and_shared_helpers(self):
         patterns = self.run_profile('radeon-vm', ['/radeon-vm/', '!/_common/radeon/'])
-        self.assertIn('/vllm/', patterns)
+        self.assertNotIn('/vllm/', patterns)
         self.assertIn('/llama-cpp/', patterns)
         self.assertIn('/_common/', patterns)
         self.assertIn('/radeon-vm/', patterns)
@@ -68,7 +68,7 @@ class VmStackSelectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / '.git').mkdir()
-            for name in ('vllm', 'llama-cpp'):
+            for name in ('llama-cpp',):
                 stack = root / name
                 stack.mkdir()
                 (stack / 'compose.yaml').write_text('services: {}\n')
@@ -97,9 +97,8 @@ docker() {
             return result, log.read_text().splitlines() if log.exists() else []
 
     def test_uses_vm_variant_only_for_running_stack(self):
-        result, calls = self.run_dpull('vllm')
+        result, calls = self.run_dpull('llama-cpp')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(any('label=com.docker.compose.project=vllm' in call for call in calls))
         self.assertTrue(any('label=com.docker.compose.project=llama-cpp' in call for call in calls))
         compose = [call for call in calls if call.startswith('compose ')]
         self.assertEqual(len(compose), 3)
@@ -111,7 +110,7 @@ docker() {
         self.assertFalse(any(call.startswith('compose ') for call in calls))
 
     def test_deep_deploy_restores_only_preselected_vm_stack(self):
-        result, calls = self.run_dpull('', selected='vllm')
+        result, calls = self.run_dpull('', selected='llama-cpp')
         self.assertEqual(result.returncode, 0, result.stderr)
         compose = [call for call in calls if call.startswith('compose ')]
         self.assertEqual(len(compose), 3)
@@ -124,7 +123,7 @@ docker() {
         self.assertFalse(any(call.startswith('compose ') for call in calls))
 
     def test_missing_vm_env_stops_before_compose(self):
-        result, calls = self.run_dpull('vllm', include_env=False)
+        result, calls = self.run_dpull('llama-cpp', include_env=False)
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any(call.startswith('compose ') for call in calls))
 
@@ -140,7 +139,7 @@ class DeepDeployTests(unittest.TestCase):
         code = code.replace('== /docker/llama-cpp', '== "$TEST_ROOT/llama-cpp"')
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            for name in ('vllm', 'llama-cpp'):
+            for name in ('llama-cpp',):
                 stack = root / name
                 stack.mkdir()
                 for file in ('compose.yaml', 'compose.vm.yaml', '.env.vm.local'):
@@ -152,7 +151,7 @@ class DeepDeployTests(unittest.TestCase):
 HOSTNAME=radeon-vm
 docker() {
     printf '%s\\n' "$*" >> "$TEST_LOG"
-    if [[ "$1" == ps && "$*" == *project=vllm* ]]; then echo container-id; fi
+    if [[ "$1" == ps && "$*" == *project=llama-cpp* ]]; then echo container-id; fi
     return 0
 }
 """
@@ -163,7 +162,7 @@ docker() {
             downs = [call for call in calls if call.startswith('compose ')]
             self.assertEqual(len(downs), 1)
             self.assertIn('--env-file .env.vm.local -f compose.vm.yaml down -v', downs[0])
-            self.assertIn('dpull=vllm', calls)
+            self.assertIn('dpull=llama-cpp', calls)
 
 
 class FanUnitGuardTests(unittest.TestCase):

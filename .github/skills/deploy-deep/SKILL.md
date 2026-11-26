@@ -234,7 +234,7 @@ vm_active=()
 for app_dir in /docker/*/; do
 	[ -f "${app_dir}compose.yaml" ] || [ -f "${app_dir}compose.yml" ] || continue
 	compose_cmd=(docker compose)
-	if [[ ${HOSTNAME%%.*} == radeon-vm && ( ${app_dir%/} == /docker/vllm || ${app_dir%/} == /docker/llama-cpp ) ]]; then
+	if [[ ${HOSTNAME%%.*} == radeon-vm && ${app_dir%/} == /docker/llama-cpp ]]; then
 		project=${app_dir%/}
 		project=${project##*/}
 		running=$(docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}}')
@@ -255,7 +255,7 @@ fi
 
 - The down loop mirrors `dpull`'s stack discovery and runs before its pull,
   so containers stop with the definitions that created them. On `radeon-vm`,
-  it records active split stacks, uses their VM-specific Compose files, and
+  it records the active split stack, uses its VM-specific Compose file, and
   passes that list to `dpull` so intentionally stopped stacks stay stopped.
   After a bootstrap pull, use the pre-pull teardown plan instead.
 - `dpull` runs `git pull`, then per stack `pull --ignore-buildable`,
