@@ -97,12 +97,20 @@ and 256 output tokens, followed by three synchronized four-client cohorts with
 | Healthy fan-control samples | 71/71 | 49/49 | Healthy |
 
 Both modes completed their API requests without an OOM, restart or inference
-error. Neither mode passed the PCIe stability gate: the PP2 startup and test
-window observed six correctable `BadTLP` events, and the TP2 benchmark added two
-more after a baseline of six. No sustained run should be considered stable until
-the affected card, route and riser combinations are isolated and retested.
-TP2 remains the active configuration because it delivered the higher throughput,
-but the performance result does not clear the underlying PCIe faults.
+error. Neither mode passed the PCIe stability gate. PP2 had five correctable
+`BadTLP` events in its startup/test window. TP2 startup added one event, and the
+benchmark added two more, for eight total on this boot. All eight were marked
+corrected by hardware, with zero uncorrectable AER events or GPU resets.
+
+The repeated PP2 and TP2 results were tight, with no failed request, timeout or
+obvious performance outlier attributable to an event. A corrected PCIe TLP can
+still require a replay and incur a brief latency cost, so this observation does
+not prove zero effect at the transaction level. It does show no material
+user-visible degradation in this bounded test: the TP2 run retained its
+throughput advantage and both modes completed cleanly. No sustained run should
+be considered stable until the affected card, route and riser combinations are
+isolated and retested. TP2 remains active because it delivered the higher
+throughput, but the performance result does not clear the underlying PCIe faults.
 
 ## Kveikur LXC Model Storage
 
