@@ -42,7 +42,7 @@ services:
     shm_size: 4gb
     ports:
       - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:8000:8000/tcp
-    # Match tensor parallelism to the attached and validated V620 count.
+    # Split model layers across the attached V620s, one pipeline stage per GPU.
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
@@ -66,8 +66,8 @@ services:
       - float16
       - --quantization
       - gptq
-      - --tensor-parallel-size
-      - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+      - --pipeline-parallel-size
+      - ${VLLM_PIPELINE_PARALLEL_SIZE:-1}
       - --max-model-len
       - ${CONTEXT_SIZE:-262144}
       - --speculative-config

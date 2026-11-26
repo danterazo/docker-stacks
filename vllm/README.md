@@ -11,7 +11,7 @@ not mounted. `data/` contains writable caches.
 
 The configured model and its path are in `.env`. The current model is
 `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4`, served as `qwen3.6-35b-a3b` with
-262,144 tokens over two GPUs.
+262,144 tokens over two pipeline-parallel GPU stages (layer splitting).
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
 DeepSeek-R1-Distill-Qwen-1.5B FP16 smoke-test checkpoint is now under
@@ -63,15 +63,19 @@ curl https://vllm.samskeyti.net/v1/chat/completions \
   -N -d '{"model":"qwen3.6-35b-a3b","messages":[{"role":"user","content":"Say hello briefly."}],"max_tokens":128,"stream":true}'
 ```
 
-The current configuration requests two GPUs, 262144 tokens, up to five
-concurrent sequences and a 0.80 per-GPU memory utilization target. This target is not a
-hard VRAM limit or a GPU reservation; competing inference processes can still
-cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom all-reduce
-are conservative settings, not performance tuning; AMD SMI reported P2P
-disabled between the two cards. Loading a model can use swap on this VM;
-loading the GPTQ model from NFS previously took several minutes. The older
-Qwen3-32B-AWQ checkpoint was
-removed after its GPTQ alternative was downloaded. Change
+The current configuration uses two pipeline-parallel stages, 262144 tokens,
+up to five concurrent sequences and a 0.80 per-GPU memory utilization target.
+Tensor parallelism remains at vLLM's default of one rank. The 35B GPTQ
+checkpoint is retained because the preceding two-card validation loaded the
+model at about 24.5 GiB per V620; layer balance still needs a startup and
+smoke test in the pipeline-parallel configuration. The utilization target is
+not a hard VRAM limit or a GPU reservation; competing inference processes can
+still cause out-of-memory errors. `NCCL_P2P_DISABLE=1` and disabled custom
+all-reduce are conservative settings, not performance tuning; AMD SMI
+reported P2P disabled between the two cards. Loading a model can use swap on
+this VM; loading the GPTQ model from NFS previously took several minutes. The
+older Qwen3-32B-AWQ checkpoint was removed after its GPTQ alternative was
+downloaded. Change
 `VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and the capacity settings in `.env`,
 then recreate with `docker compose up -d`. Stable image, cache, and RDNA2
 settings are grouped in `compose.yaml`; architecture-specific CLI flags are
