@@ -30,8 +30,9 @@ name is not a Hugging Face checkpoint path.
 | Model comparison | TP2 Qwen3.6 vs Qwen3-Coder-Next 80B-A3B | At 22.5K tokens, Qwen3.6 was 12.02 vs 23.65 s TTFT and 71.40 vs 38.09 tok/s decode; four-client aggregate output was 180.28 vs 65.62 tok/s | Keep Qwen3.6 |
 | Six-agent quality | Aider polyglot, 30 mixed-language exercises, thinking enabled | 36.7% passed on attempt 1 and 66.7% after retry; 100% well-formed edits; no OOM, timeout, context exhaustion, malformed response or restart | Keep retry-oriented thinking mode |
 | Six-agent throughput | `--max-num-seqs 6`, 64K Aider context | Six running requests, zero queued; 201 generation tok/s aggregate during a 60-second sample, about 33.5 tok/s per agent | Keep six sequences |
-| Reliability | Qwen3.6 TP2+MTP1, 250 W cards, conservative PCIe settings | The final six-agent window had zero BadTLP/AER events; earlier PP2/TP2 trials had correctable route-dependent errors, but zero uncorrectable errors or GPU resets | Retain `NCCL_P2P_DISABLE=1` and disabled custom all-reduce |
+| Reliability | Qwen3.6 TP2+MTP1, 250 W cards, conservative PCIe settings | The final six-agent window had zero BadTLP/AER events. The later cold boot reported 138 and 3 correctable BadTLP counters plus 2 correctable timeouts on root ports, none on the V620 endpoints, and no increase during a 60-second authenticated inference sample; there were no uncorrectable errors or GPU resets | Retain `NCCL_P2P_DISABLE=1` and disabled custom all-reduce; retest after board/riser changes |
 | Production profile | Qwen3.6-35B-A3B GPTQ | TP2, MTP=1, 262144 server context, six sequences, 0.80 GPU-memory utilization, thinking and automatic tool choice enabled | Active settings |
+| Post-benchmark reboot | `vm.nr_hugepages=1200` on Kveikur | Kveikur allocated 1,200 pages at 2 MiB each; CT 150, CT 131, fan control and the authenticated vLLM endpoint returned healthy after boot | Huge-page change applied; keep the selected vLLM profile |
 
 The Aider result is a 30-of-225 exercise sample rather than a full leaderboard.
 The TP2 and Qwen3.6 advantages are consistent across latency, long-context
