@@ -4,13 +4,20 @@ services:
     container_name: vllm
     user: 1000:1000
     group_add:
-      - ${VIDEO_GID:-44}
-      - ${RENDER_GID:-991}
+      - ${VIDEO_GID:?Set VIDEO_GID in .env}
+      - ${RENDER_GID:?Set RENDER_GID in .env}
     restart: unless-stopped
     init: true
     environment:
       # entrypoint
-      VLLM_API_KEY_NAMES: ${VLLM_API_KEY_NAMES:?Set VLLM_API_KEY_NAMES in .env}
+      VLLM_API_KEY_NAMES: >-
+        VLLM_API_KEY_OVEDUR
+        VLLM_API_KEY_KEX
+        VLLM_API_KEY_CERULEAN
+        VLLM_API_KEY_KVEIKUR
+        VLLM_API_KEY_NEOSERVER
+        VLLM_API_KEY_AUDIOMUSE
+        VLLM_API_KEY_MARIGOLD
       # runtime identity & cache paths
       HOME: /state
       # UID 1000 has no passwd entry in the image; PyTorch needs a username.
@@ -36,9 +43,8 @@ services:
       PYTORCH_TUNABLEOP_ENABLED: 0
       PYTORCH_TUNABLEOP_HIPBLASLT_ENABLED: 0
       NCCL_P2P_DISABLE: 1
-    env_file:
-      - .env
-      - .secrets
+    # .env is Compose interpolation; only secrets enter the container as env vars.
+    env_file: .secrets
     shm_size: 4gb
     ports:
       - ${INFERENCE_BIND_ADDRESS:?Set INFERENCE_BIND_ADDRESS to the guest LAN IP}:8000:8000/tcp
@@ -57,7 +63,7 @@ services:
       - serve
       - /models/local/${VLLM_MODEL_DIR:?Set VLLM_MODEL_DIR to a Hugging Face checkpoint}
       - --served-model-name
-      - ${VLLM_SERVED_MODEL_NAME:-vllm}
+      - ${VLLM_SERVED_MODEL_NAME:?Set VLLM_SERVED_MODEL_NAME in .env}
       - --host
       - 0.0.0.0
       - --port
@@ -67,18 +73,18 @@ services:
       - --quantization
       - gptq
       - --tensor-parallel-size
-      - ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+      - ${VLLM_TENSOR_PARALLEL_SIZE:?Set VLLM_TENSOR_PARALLEL_SIZE in .env}
       - --max-model-len
-      - ${CONTEXT_SIZE:-262144}
+      - ${VLLM_MAX_MODEL_LEN:?Set VLLM_MAX_MODEL_LEN in .env}
       - --speculative-config
       - '{"method":"mtp","num_speculative_tokens":1}'
       - --max-num-seqs
-      - ${VLLM_MAX_NUM_SEQS:-5}
+      - ${VLLM_MAX_NUM_SEQS:?Set VLLM_MAX_NUM_SEQS in .env}
       - --enable-prefix-caching
       - --mamba-cache-dtype
       - float32
       - --gpu-memory-utilization
-      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.3}
+      - ${VLLM_GPU_MEMORY_UTILIZATION:?Set VLLM_GPU_MEMORY_UTILIZATION in .env}
       - --kv-cache-dtype
       - float16
       - --limit-mm-per-prompt

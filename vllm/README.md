@@ -3,8 +3,8 @@
 The Compose service is configured to serve a local Hugging Face safetensors
 checkpoint over the OpenAI-compatible API on `192.168.30.150:8000` and
 `https://vllm.samskeyti.net`. The endpoint requires a bearer token from
-`.secrets`; `VLLM_API_KEY_NAMES` in `.env` selects which client variables the
-service accepts. The service pins
+`.secrets`; `VLLM_API_KEY_NAMES` in `compose.yaml` selects which client
+variables the service accepts. The service pins
 `ghcr.io/opengfx1030/vllm-rdna:v0.34.0-1-rocm7.14.0`, rather than the moving
 nightly tag. The local model library is mounted read-write; the NAS library is
 not mounted. `data/` contains writable caches.
@@ -12,6 +12,10 @@ not mounted. `data/` contains writable caches.
 The configured model and its path are in `.env`. The current model is
 `palmfuture/Qwen3.6-35B-A3B-GPTQ-Int4`, served as `qwen3.6-35b-a3b` with
 262,144 tokens over two tensor-parallel V620 ranks.
+`.env` contains only host, model and capacity values that are expected to
+change for this deployment. Compose reads it for interpolation but does not
+inject it into the container. Fixed runtime and RDNA2 settings live in
+`compose.yaml`; only `.secrets` is injected through `env_file`.
 Check `/v1/models` for the served name and context limit; this does not
 establish full-length inference. The earlier
 DeepSeek-R1-Distill-Qwen-1.5B FP16 smoke-test checkpoint is now under
@@ -74,10 +78,10 @@ disabled between the two cards. Loading a model can use swap on this VM;
 loading the GPTQ model from NFS previously took several minutes. The older
 Qwen3-32B-AWQ checkpoint was removed after its GPTQ alternative was downloaded.
 Change
-`VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and the capacity settings in `.env`,
-then recreate with `docker compose up -d`. Stable image, cache, and RDNA2
-settings are grouped in `compose.yaml`; architecture-specific CLI flags are
-defined beside the rest of the startup command.
+`VLLM_MODEL_DIR`, `VLLM_SERVED_MODEL_NAME`, and the grouped capacity settings
+in `.env`, then recreate with `docker compose up -d`. Stable image, cache, and
+RDNA2 settings are grouped in `compose.yaml`; architecture-specific CLI flags
+are defined beside the rest of the startup command.
 
 ## Agent quality benchmark
 
