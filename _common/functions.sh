@@ -17,6 +17,9 @@ dpull() {
 		return 1
 	fi
 
+	# ensure /docker is trusted by git regardless of ownership context
+	git config --global --replace-all safe.directory /docker || true
+
 	# pull latest changes from Git
 	cd "$root_dir" || return 1
 	branch=$(git branch --show-current) || return 1
