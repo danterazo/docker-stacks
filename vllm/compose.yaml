@@ -73,7 +73,7 @@ services:
       - --speculative-config
       - '{"method":"mtp","num_speculative_tokens":1}'
       - --max-num-seqs
-      - "5"
+      - ${VLLM_MAX_NUM_SEQS:-5}
       - --enable-prefix-caching
       - --mamba-cache-dtype
       - float32
