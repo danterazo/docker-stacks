@@ -79,6 +79,31 @@ then recreate with `docker compose up -d`. Stable image, cache, and RDNA2
 settings are grouped in `compose.yaml`; architecture-specific CLI flags are
 defined beside the rest of the startup command.
 
+## Two-card parallelism A/B (2026-11-26)
+
+PP2 and TP2 used the same image, Qwen3.6-35B-A3B GPTQ-Int4 checkpoint, MTP=1,
+250 W card caps, 262144-token server limit and 80% GPU-memory target. The
+measured workload was five sequential requests with about 958 prompt tokens
+and 256 output tokens, followed by three synchronized four-client cohorts with
+128 output tokens each.
+
+| Metric | PP2 | TP2 | TP2 change |
+| :-- | --: | --: | --: |
+| Median first token latency | 0.421 s | 0.284 s | 32.5% lower |
+| Median single-request decode | 71.93 tok/s | 103.95 tok/s | 44.5% higher |
+| Median four-client aggregate output | 133.85 tok/s | 193.11 tok/s | 44.3% higher |
+| Maximum four-client first token latency | 1.382 s | 1.026 s | 25.7% lower |
+| Maximum junction temperature | 68 C | 71 C | 3 C higher |
+| Healthy fan-control samples | 71/71 | 49/49 | Healthy |
+
+Both modes completed their API requests without an OOM, restart or inference
+error. Neither mode passed the PCIe stability gate: the PP2 startup and test
+window observed six correctable `BadTLP` events, and the TP2 benchmark added two
+more after a baseline of six. No sustained run should be considered stable until
+the affected card, route and riser combinations are isolated and retested.
+TP2 remains the active configuration because it delivered the higher throughput,
+but the performance result does not clear the underlying PCIe faults.
+
 ## Kveikur LXC Model Storage
 
 The LXC maps the host library `/rpool/data/models/safetensors` to
