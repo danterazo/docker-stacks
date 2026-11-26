@@ -112,6 +112,53 @@ be considered stable until the affected card, route and riser combinations are
 isolated and retested. TP2 remains active because it delivered the higher
 throughput, but the performance result does not clear the underlying PCIe faults.
 
+## Qwen3-Coder-Next W4A16 trial (2026-11-26)
+
+`btbtyler09/Qwen3-Coder-Next-GPTQ-4bit` was tested as a 47 GiB GPTQ model
+using two tensor-parallel ranks. The checkpoint is stored on Kex under
+`/tank/models/language-models/hf_safetensors/btbtyler09/` and exposed read-only
+to CT 150 through its `/models/nas` NFS bind; the trial did not consume more
+space on Kveikur's model dataset. It loaded 22.76 GiB on each V620 at 90%
+memory utilization, with 32,768 tokens configured and 3.63 GiB available per
+GPU for KV cache. Startup took 319 seconds from the Kex NFS source.
+
+Both models used the same TP2 hardware, 250 W caps, five maximum sequences,
+about 1,040 prompt tokens for short requests, 22,540 tokens for long-context
+requests and 256 output tokens. The stress arm used four simultaneous clients.
+The current model retained its MTP=1 setting; Coder-Next has no MTP head.
+
+| Metric | Qwen3.6-35B-A3B | Coder-Next 80B-A3B GPTQ |
+| :-- | --: | --: |
+| Short-request median TTFT | 0.492 s | 1.102 s |
+| Short-request median decode | 29.89 tok/s | 49.02 tok/s |
+| 22.5K-context TTFT | 12.02 s | 23.65 s |
+| 22.5K-context prefill | 1,875 tok/s | 953 tok/s |
+| 22.5K-context decode | 71.40 tok/s | 38.09 tok/s |
+| Four-client aggregate output | 180.28 tok/s | 65.62 tok/s |
+| Four-client maximum TTFT | 1.191 s | 4.434 s |
+| Model memory per GPU | 11.74 GiB | 22.76 GiB |
+| Tested maximum context | 262,144 | 32,768 |
+| Thinking mode | Supported | Not supported |
+| Startup | Local model, about 40 s | Kex NFS, 319 s |
+| Correctable BadTLP added during benchmark | 7 | 9 |
+
+Coder-Next's advantage on the short raw-completion prompt was content- and
+MTP-acceptance-dependent; it was approximately twice as slow on the short TTFT
+and lost decisively on long-context and four-client throughput. Both models
+returned successful content and parsed a required calculator tool call. The
+Coder-Next trial produced no OOM, container restart or request failure.
+
+The published third-party picture does not justify replacing the current
+model. Qwen3.6-35B-A3B reports 73.4 on SWE-bench Verified and 51.5 on
+Terminal-Bench 2.0; the
+[Coder-Next technical report](https://ar5iv.labs.arxiv.org/html/2603.00729)
+reports 70.6–71.3 on SWE-bench across evaluated agent scaffolds and 25.8–36.2
+on its Terminal-Bench variants. Benchmark scaffolds are not perfectly
+comparable, but Coder-Next does not show a clear quality margin, has no
+thinking mode and uses more VRAM. The active service was restored to
+Qwen3.6-35B-A3B TP2 with MTP=1 after the trial. The Coder-Next checkpoint
+remains on Kex as an optional streamed comparison model.
+
 ## Kveikur LXC Model Storage
 
 The LXC maps the host library `/rpool/data/models/safetensors` to
