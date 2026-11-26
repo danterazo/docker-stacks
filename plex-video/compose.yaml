@@ -8,10 +8,9 @@ services:
     env_file: .env
     volumes:
       - ./data/plex/:/config/:rw
+      - /transcode/:/transcode/:rw
       - /tank/backups/apps/plex-video/:/backups/:rw
       - /tank/media/videos/:/media/videos/:rw
-    tmpfs:
-      - /transcode:rw,size=1g,uid=1000,gid=1000,mode=0755
 
   # TODO: add oauth2
   tautulli-video:
